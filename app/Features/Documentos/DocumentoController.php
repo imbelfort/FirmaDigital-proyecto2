@@ -7,6 +7,7 @@ use App\Models\Tramite;
 use App\Models\BitacoraTramite;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class DocumentoController
 {
@@ -27,7 +28,7 @@ class DocumentoController
             $archivoUrl = asset('storage/' . $path);
             $hash = hash_file('sha256', $request->file('archivo')->getRealPath());
         } elseif (!$archivoUrl) {
-            $archivoUrl = 'http://archivos.uagrm.edu.bo/exp/' . Str_slug($request->nombre_documento) . '.pdf';
+            $archivoUrl = 'http://archivos.uagrm.edu.bo/exp/' . Str::slug($request->nombre_documento) . '.pdf';
         }
 
         $doc = DocumentoExpediente::create([
