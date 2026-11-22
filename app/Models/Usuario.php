@@ -44,4 +44,9 @@ class Usuario extends Model
     {
         return $this->hasOne(Autoridad::class, 'id_autoridad', 'id_usuario');
     }
+
+    public function tramites()
+    {
+        return $this->hasMany(Tramite::class, 'id_usuario_solicitante', 'id_usuario');
+    }
 }

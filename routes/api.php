@@ -10,34 +10,43 @@ use App\Features\SeguimientoSla\SeguimientoSlaController;
 use App\Features\Reportes\ReporteController;
 use App\Features\BusquedaGlobal\BusquedaGlobalController;
 use App\Features\Pagos\PagoController;
+use App\Features\Auditoria\AuditoriaController;
 
-// Autenticación
+// Autenticación (Pública)
 Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::get('/user', [AuthController::class, 'user']);
     Route::post('/logout', [AuthController::class, 'logout']);
 });
 
+// Contador de Visitas por Página (Público)
+Route::post('/visitas/registrar', [AuditoriaController::class, 'registrarVisita']);
+
+// Bitácora de Auditoría del Sistema (Exclusivo Administrador)
+Route::prefix('auditoria')->middleware('rbac:ADMINISTRATIVO')->group(function () {
+    Route::get('/', [AuditoriaController::class, 'index']);
+});
+
 // Búsqueda Global (Opciones + Registros)
 Route::get('/search', [BusquedaGlobalController::class, 'search']);
 
-// Usuarios
+// Usuarios (Crear/Modificar usuarios restringido a Administrador General)
 Route::prefix('usuarios')->group(function () {
     Route::get('/', [UsuarioController::class, 'index']);
-    Route::post('/', [UsuarioController::class, 'store']);
-    Route::put('/{id}', [UsuarioController::class, 'update']);
-    Route::delete('/{id}', [UsuarioController::class, 'destroy']);
+    Route::post('/', [UsuarioController::class, 'store'])->middleware('rbac:ADMINISTRATIVO');
+    Route::put('/{id}', [UsuarioController::class, 'update'])->middleware('rbac:ADMINISTRATIVO');
+    Route::delete('/{id}', [UsuarioController::class, 'destroy'])->middleware('rbac:ADMINISTRATIVO');
 });
 
 // Trámites
 Route::prefix('tramites')->group(function () {
     Route::get('/', [TramiteController::class, 'index']);
     Route::get('/tipos', [TramiteController::class, 'tiposTramite']);
-    Route::post('/tipos', [TramiteController::class, 'storeTipoTramite']);
-    Route::put('/tipos/{id}', [TramiteController::class, 'updateTipoTramite']);
-    Route::post('/', [TramiteController::class, 'store']);
-    Route::post('/{id}/flujo', [TramiteController::class, 'avanzarFlujo']);
-    Route::post('/{id}/observaciones', [TramiteController::class, 'agregarObservacion']);
+    Route::post('/tipos', [TramiteController::class, 'storeTipoTramite'])->middleware('rbac:ADMINISTRATIVO');
+    Route::put('/tipos/{id}', [TramiteController::class, 'updateTipoTramite'])->middleware('rbac:ADMINISTRATIVO');
+    Route::post('/', [TramiteController::class, 'store'])->middleware('rbac:ALUMNO,DOCENTE,ADMINISTRATIVO');
+    Route::post('/{id}/flujo', [TramiteController::class, 'avanzarFlujo'])->middleware('rbac:ENCARGADO,ADMINISTRATIVO');
+    Route::post('/{id}/observaciones', [TramiteController::class, 'agregarObservacion'])->middleware('rbac:ENCARGADO,ADMINISTRATIVO');
     Route::post('/observaciones/{id}/subsanar', [TramiteController::class, 'subsanarObservacion']);
 });
 
@@ -51,15 +60,15 @@ Route::prefix('pagos')->group(function () {
 
 // Documentos del Expediente
 Route::prefix('documentos')->group(function () {
-    Route::post('/', [DocumentoController::class, 'store']);
-    Route::post('/{id}/validar', [DocumentoController::class, 'validar']);
+    Route::post('/', [DocumentoController::class, 'store'])->middleware('rbac:ALUMNO,ENCARGADO,ADMINISTRATIVO');
+    Route::post('/{id}/validar', [DocumentoController::class, 'validar'])->middleware('rbac:ENCARGADO,ADMINISTRATIVO');
 });
 
-// Firma Digital y Despacho
+// Firma Digital y Despacho (Exclusivo Vicerrector y Encargado/Admin)
 Route::prefix('firma')->group(function () {
     Route::get('/delegaciones', [FirmaController::class, 'delegaciones']);
-    Route::post('/tramite/{id}', [FirmaController::class, 'firmar']);
-    Route::post('/despacho/{id}', [FirmaController::class, 'despachar']);
+    Route::post('/tramite/{id}', [FirmaController::class, 'firmar'])->middleware('rbac:VICERRECTOR,ADMINISTRATIVO');
+    Route::post('/despacho/{id}', [FirmaController::class, 'despachar'])->middleware('rbac:ENCARGADO,ADMINISTRATIVO');
 });
 
 // SLA y Portal de Seguimiento

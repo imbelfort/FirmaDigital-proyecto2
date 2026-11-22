@@ -1,17 +1,28 @@
 <template>
   <div class="space-y-6">
-    <!-- Encabezado Docente -->
-    <div class="bg-gradient-to-r from-amber-600 via-orange-700 to-red-800 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
-      <div class="relative z-10">
-        <span class="text-xs font-semibold tracking-wider uppercase px-3 py-1 rounded-full bg-white/20 backdrop-blur-xs">
-          Portal Docente & Revisor Académico
-        </span>
-        <h1 class="text-2xl sm:text-3xl font-extrabold mt-2 heading-font">
-          Docente: {{ state.user.nombre }} {{ state.user.apellidos }}
-        </h1>
-        <p class="text-amber-100 text-sm mt-1">
-          Facultad: <span class="font-bold text-white">{{ state.user.unidad_academica || 'FICCT' }}</span> | Código Docente: <span class="font-mono">{{ state.user.registro }}</span> | C.I.: <span class="font-mono">{{ state.user.ci }}</span>
-        </p>
+    <!-- Card de Bienvenida M3 Estilizada y Limpia -->
+    <div class="m3-hero-gradient rounded-3xl p-6 sm:p-7 text-white shadow-xl relative overflow-hidden transition-all duration-300">
+      <div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="text-2xl sm:text-3xl animate-bounce">👋</span>
+            <h1 class="text-2xl sm:text-3xl font-extrabold heading-font tracking-tight">
+              Hola, {{ state.user.nombre }} {{ state.user.apellidos }}
+            </h1>
+          </div>
+          <p class="text-white/85 text-xs sm:text-sm mt-1.5 font-medium">
+            Facultad: <span class="font-bold text-white">{{ state.user.unidad_academica || 'FICCT' }}</span> | Código Docente: <span class="font-mono">{{ state.user.registro }}</span> | C.I.: <span class="font-mono">{{ state.user.ci }}</span>
+          </p>
+        </div>
+        <div class="flex items-center space-x-2 self-start sm:self-center">
+          <span class="text-[11px] font-bold tracking-wider uppercase px-3.5 py-1.5 rounded-full bg-white/20 border border-white/25 backdrop-blur-md shadow-xs">
+            📚 Portal Docente & Revisor Académico
+          </span>
+        </div>
+      </div>
+      <!-- Decoración sutil de fondo -->
+      <div class="absolute right-0 bottom-0 opacity-10 translate-x-12 translate-y-12 pointer-events-none">
+        <svg class="w-64 h-64 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a10.97 10.97 0 00-.25 2.449c0 4.148 2.5 7.9 6 9.4 3.5-1.5 6-5.252 6-9.4 0-.847-.09-1.67-.25-2.45l2.644-1.13a1 1 0 000-1.84l-7-3z"/></svg>
       </div>
     </div>
 

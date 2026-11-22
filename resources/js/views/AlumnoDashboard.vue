@@ -1,38 +1,28 @@
 <template>
   <div class="space-y-6">
-    <!-- Encabezado M3 del Alumno -->
-    <div class="m3-surface p-6 sm:p-8 bg-gradient-to-r from-blue-700 via-indigo-700 to-sky-800 text-white shadow-lg relative overflow-hidden">
-      <div class="relative z-10">
-        <span class="text-[11px] font-bold tracking-wider uppercase px-3 py-1 rounded-full bg-white/20 backdrop-blur-md">
-          Portal del Estudiante
-        </span>
-        <h1 class="text-2xl sm:text-3xl font-extrabold mt-2 heading-font">
-          Hola, {{ state.user.nombre }} {{ state.user.apellidos }}
-        </h1>
-        <p class="text-blue-100 text-xs sm:text-sm mt-1 max-w-2xl">
-          RU: <span class="font-mono font-bold">{{ state.user.registro }}</span> | C.I.: <span class="font-mono">{{ state.user.ci }}</span> | Carrera: {{ state.user.alumno ? state.user.alumno.carrera : state.user.unidad_academica }}
-        </p>
-
-        <!-- Botones de Acción Directa -->
-        <div class="mt-5 flex flex-wrap gap-2.5">
-          <button
-            @click="activeSubTab = 'disponibles'"
-            class="px-5 py-2.5 rounded-full bg-white text-blue-900 font-bold text-xs shadow-md hover:bg-blue-50 transition flex items-center space-x-2 cursor-pointer"
-          >
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <span>Ver Trámites Disponibles para Solicitar</span>
-          </button>
-          <button
-            @click="activeSubTab = 'mis_tramites'"
-            class="px-4 py-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white font-semibold text-xs border border-white/20 transition flex items-center space-x-2 cursor-pointer backdrop-blur-xs"
-          >
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-            <span>Mi Historial de Trámites ({{ misTramites.length }})</span>
-          </button>
+    <!-- Card de Bienvenida M3 Estilizada y Limpia -->
+    <div class="m3-hero-gradient rounded-3xl p-6 sm:p-7 text-white shadow-lg relative overflow-hidden transition-all duration-300">
+      <div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="text-2xl sm:text-3xl animate-bounce">👋</span>
+            <h1 class="text-2xl sm:text-3xl font-extrabold heading-font tracking-tight">
+              Hola, {{ state.user.nombre }} {{ state.user.apellidos }}
+            </h1>
+          </div>
+          <p class="text-white/85 text-xs sm:text-sm mt-1.5 font-medium">
+            {{ state.user.rol === 'DOCENTE' ? 'Código Docente' : 'RU' }}: <span class="font-mono font-bold">{{ state.user.registro }}</span> | C.I.: <span class="font-mono">{{ state.user.ci }}</span> | {{ state.user.rol === 'DOCENTE' ? 'Facultad' : 'Carrera' }}: {{ state.user.alumno ? state.user.alumno.carrera : (state.user.unidad_academica || 'UAGRM') }}
+          </p>
+        </div>
+        <div class="flex items-center space-x-2 self-start sm:self-center">
+          <span class="text-[11px] font-bold tracking-wider uppercase px-3.5 py-1.5 rounded-full bg-white/20 border border-white/25 backdrop-blur-md shadow-xs">
+            {{ state.user.rol === 'DOCENTE' ? '📚 Portal Docente / Académico' : '🎓 Portal del Estudiante' }}
+          </span>
         </div>
       </div>
-      <div class="absolute right-0 bottom-0 opacity-10 translate-x-10 translate-y-10">
-        <svg class="w-72 h-72 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a10.97 10.97 0 00-.25 2.449c0 4.148 2.5 7.9 6 9.4 3.5-1.5 6-5.252 6-9.4 0-.847-.09-1.67-.25-2.45l2.644-1.13a1 1 0 000-1.84l-7-3z"/></svg>
+      <!-- Decoración sutil de fondo que acompaña el gradiente del tema -->
+      <div class="absolute right-0 bottom-0 opacity-10 translate-x-12 translate-y-12 pointer-events-none">
+        <svg class="w-64 h-64 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a10.97 10.97 0 00-.25 2.449c0 4.148 2.5 7.9 6 9.4 3.5-1.5 6-5.252 6-9.4 0-.847-.09-1.67-.25-2.45l2.644-1.13a1 1 0 000-1.84l-7-3z"/></svg>
       </div>
     </div>
 
@@ -201,12 +191,13 @@
           </button>
         </div>
 
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div
-            v-for="t in tramitesFiltrados"
-            :key="t.id"
-            class="m3-card p-5 border border-slate-200/80 dark:border-slate-800 space-y-4 hover:border-blue-400/50 transition"
-          >
+        <div v-else class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div
+              v-for="t in tramitesPaginados"
+              :key="t.id"
+              class="m3-card p-5 border border-slate-200/80 dark:border-slate-800 space-y-4 hover:border-blue-400/50 transition"
+            >
           <!-- Encabezado con código y fecha legible -->
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-2">
@@ -289,13 +280,36 @@
             </div>
           </div>
 
-          <!-- Documentos del Expediente -->
-          <div class="pt-2 border-t border-slate-100 dark:border-slate-800">
+          <!-- Documentos del Expediente (Solo se habilita adjuntar si el trámite requiere recaudos y está en RECEPCION/INICIADO o en OBSERVADO para subsanar) -->
+          <div v-if="t.tipo_tramite && t.tipo_tramite.requisitos && t.tipo_tramite.requisitos.length > 0" class="pt-2 border-t border-slate-100 dark:border-slate-800">
             <div class="flex items-center justify-between text-xs mb-2">
-              <span class="font-bold text-slate-700 dark:text-slate-300">Expediente Digital ({{ t.documentos ? t.documentos.length : 0 }} recaudos)</span>
-              <button @click="openSubirDoc(t)" class="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer">+ Adjuntar</button>
+              <span class="font-bold text-slate-700 dark:text-slate-300">
+                Expediente Digital ({{ t.documentos ? t.documentos.length : 0 }} recaudos)
+              </span>
+              <!-- Botón condicional según etapa y estado procesal -->
+              <button
+                v-if="puedeAdjuntar(t)"
+                @click="openSubirDoc(t)"
+                class="px-2.5 py-1 rounded-full text-xs font-bold transition flex items-center space-x-1 cursor-pointer"
+                :class="t.estado === 'OBSERVADO' ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 hover:bg-amber-200' : 'bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 hover:bg-blue-100'"
+              >
+                <span>{{ t.estado === 'OBSERVADO' ? 'Subsanar / Reemplazar Recaudo' : '+ Adjuntar Recaudo' }}</span>
+              </button>
+              <span v-else class="text-[10px] text-slate-400 italic">
+                {{ getMotivoBloqueoAdjunto(t) }}
+              </span>
             </div>
-            <div class="space-y-1.5 max-h-32 overflow-y-auto">
+
+            <!-- Alerta informativa si está observado -->
+            <div v-if="t.estado === 'OBSERVADO'" class="p-2.5 mb-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-[11px] text-amber-900 dark:text-amber-200 flex items-start space-x-2">
+              <svg class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+              <div>
+                <p class="font-bold">El expediente tiene observaciones del Encargado.</p>
+                <p>Por favor adjunta el documento corregido para subsanar el requisito observado.</p>
+              </div>
+            </div>
+
+            <div class="space-y-1.5 max-h-36 overflow-y-auto">
               <div
                 v-for="doc in t.documentos"
                 :key="doc.id"
@@ -305,11 +319,26 @@
                   <span class="font-medium text-slate-700 dark:text-slate-200 block truncate">{{ doc.nombre_documento }}</span>
                   <span class="font-mono text-[10px] text-slate-400 truncate block">Hash: {{ doc.hash_documento ? doc.hash_documento.substring(0, 16) + '...' : 'Generado' }}</span>
                 </div>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" :class="getDocBadge(doc.estado_validacion)">
-                  {{ formatEstadoLegible(doc.estado_validacion) }}
-                </span>
+                <div class="flex items-center space-x-1.5">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" :class="getDocBadge(doc.estado_validacion)">
+                    {{ formatEstadoLegible(doc.estado_validacion) }}
+                  </span>
+                  <!-- Botón directo de corregir si este documento específico fue observado -->
+                  <button
+                    v-if="doc.estado_validacion === 'OBSERVADO'"
+                    @click="corregirDocObservado(t, doc)"
+                    class="px-2 py-0.5 text-[10px] font-bold bg-amber-600 hover:bg-amber-700 text-white rounded cursor-pointer"
+                    title="Subir archivo corregido para este documento"
+                  >
+                    Corregir
+                  </button>
+                </div>
               </div>
             </div>
+          </div>
+          <!-- Si el trámite no requiere recaudos -->
+          <div v-else class="pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 italic">
+            ✓ Este trámite no requiere adjuntar archivos adicionales.
           </div>
 
           <!-- Certificado con QR si ya fue firmado por el Vicerrector -->
@@ -328,8 +357,37 @@
 
         </div>
       </div>
+
+      <!-- Barra de Paginación para Bandeja de Trámites Alumno -->
+      <div v-if="totalPaginas > 1" class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-200 dark:border-slate-800 text-xs">
+        <div class="text-slate-500">
+          Mostrando <span class="font-bold text-slate-700 dark:text-slate-300">{{ (paginaActual - 1) * itemsPorPagina + 1 }}</span> a 
+          <span class="font-bold text-slate-700 dark:text-slate-300">{{ Math.min(paginaActual * itemsPorPagina, tramitesFiltrados.length) }}</span> de 
+          <span class="font-bold text-slate-700 dark:text-slate-300">{{ tramitesFiltrados.length }}</span> trámites
+        </div>
+        <div class="flex items-center space-x-2">
+          <button
+            @click="paginaActual--"
+            :disabled="paginaActual <= 1"
+            class="px-3.5 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition"
+          >
+            ← Anterior
+          </button>
+          <span class="font-mono font-bold text-slate-800 dark:text-slate-200 px-2">
+            Página {{ paginaActual }} de {{ totalPaginas }}
+          </span>
+          <button
+            @click="paginaActual++"
+            :disabled="paginaActual >= totalPaginas"
+            class="px-3.5 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition"
+          >
+            Siguiente →
+          </button>
+        </div>
       </div>
     </div>
+  </div>
+</div>
 
     <!-- Pestaña 2: TRÁMITES DISPONIBLES PARA SOLICITAR (Listado Oficial con Precios, Requisitos y Botón Directo) -->
     <div v-if="activeSubTab === 'disponibles'" class="space-y-4">
@@ -693,6 +751,19 @@ const tramitesFiltrados = computed(() => {
   }
   return misTramites.value.filter(t => t.estado === filtroEstado.value);
 });
+
+const paginaActual = ref(1);
+const itemsPorPagina = ref(6);
+
+const totalPaginas = computed(() => {
+  const tot = Math.ceil(tramitesFiltrados.value.length / itemsPorPagina.value);
+  return tot > 0 ? tot : 1;
+});
+
+const tramitesPaginados = computed(() => {
+  const inicio = (paginaActual.value - 1) * itemsPorPagina.value;
+  return tramitesFiltrados.value.slice(inicio, inicio + itemsPorPagina.value);
+});
 const creandoTramite = ref(false);
 const verificandoPago = ref(false);
 const loadingPago = ref(false);
@@ -868,6 +939,33 @@ async function verificarPagoConPagoFacil() {
   } finally {
     verificandoPago.value = false;
   }
+}
+
+function puedeAdjuntar(t) {
+  // Solo se puede adjuntar si el trámite está en etapa inicial (RECEPCION / INICIADO)
+  // o si el trámite fue OBSERVADO por el Encargado para subsanación.
+  // En 'REQUISITOS_VALIDADOS', 'EXPEDIENTE_COMPILADO', 'EN_FIRMA', 'FIRMADO' o 'DESPACHADO' queda cerrado.
+  return t.estado === 'INICIADO' || t.estado === 'OBSERVADO';
+}
+
+function getMotivoBloqueoAdjunto(t) {
+  if (t.estado === 'REQUISITOS_VALIDADOS' || t.estado === 'EXPEDIENTE_COMPILADO') {
+    return 'Revisión cerrada: requisitos cotejados';
+  }
+  if (t.estado === 'EN_FIRMA') {
+    return 'En firma vicerrectoral (cerrado)';
+  }
+  if (t.estado === 'FIRMADO' || t.estado === 'DESPACHADO') {
+    return 'Trámite finalizado';
+  }
+  return 'Expediente no modificable';
+}
+
+function corregirDocObservado(t, doc) {
+  selectedTramite.value = t;
+  formDoc.value.nombre_documento = doc.nombre_documento + ' (Subsanado)';
+  archivoSeleccionado.value = null;
+  modalAdjuntar.value = true;
 }
 
 function openSubirDoc(t) {

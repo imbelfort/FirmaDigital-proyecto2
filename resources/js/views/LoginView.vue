@@ -77,6 +77,13 @@
         <p class="text-[11px] font-bold text-slate-400 mb-2 uppercase tracking-wider text-center">Cuentas disponibles para pruebas:</p>
         <div class="grid grid-cols-2 gap-2 text-xs">
           <button
+            @click="fillDemo('1000', '1000')"
+            class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-left transition cursor-pointer border border-slate-200/60 dark:border-slate-700"
+          >
+            <span class="font-bold text-red-600 dark:text-red-400 block">Admin General</span>
+            <span class="text-[10px] text-slate-500 font-mono">1000</span>
+          </button>
+          <button
             @click="fillDemo('219064748', '4567890')"
             class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-left transition cursor-pointer border border-slate-200/60 dark:border-slate-700"
           >
@@ -96,13 +103,6 @@
           >
             <span class="font-bold text-emerald-600 dark:text-emerald-400 block">Encargado Mendoza</span>
             <span class="text-[10px] text-slate-500 font-mono">1002</span>
-          </button>
-          <button
-            @click="fillDemo('1045', '3456789')"
-            class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-left transition cursor-pointer border border-slate-200/60 dark:border-slate-700"
-          >
-            <span class="font-bold text-amber-600 dark:text-amber-400 block">Docente Guzman</span>
-            <span class="text-[10px] text-slate-500 font-mono">1045</span>
           </button>
         </div>
       </div>

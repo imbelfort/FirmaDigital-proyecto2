@@ -74,35 +74,95 @@
           </div>
 
           <!-- Selector de 3 Temas Material Design 3 -->
-          <div class="relative group">
+          <div class="relative">
             <button
-              class="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
-              title="Cambiar Color de Tema"
+              @click="themeMenuOpen = !themeMenuOpen"
+              class="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer flex items-center space-x-1"
+              title="Cambiar Color de Tema Visual"
             >
               <span class="w-4 h-4 rounded-full inline-block" :class="themeBulletClass"></span>
+              <svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
             </button>
-            <div class="absolute right-0 mt-2 w-52 py-2 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 hidden group-hover:block z-50">
-              <p class="px-3.5 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">3 Temas Visuales M3</p>
+            <div
+              v-if="themeMenuOpen"
+              class="absolute right-0 mt-2 w-64 py-2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-50 animate-fade-in"
+            >
+              <p class="px-3.5 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Temas Etarios & Dinámicos</p>
+              
+              <!-- Tema Niños -->
               <button
-                @click="actions.setTheme('uagrm')"
-                class="w-full text-left px-3.5 py-2 text-xs flex items-center space-x-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
+                @click="seleccionarTema('ninos')"
+                class="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
+                :class="state.theme === 'ninos' ? 'bg-orange-50/80 dark:bg-orange-950/40 font-bold' : ''"
               >
-                <span class="w-3.5 h-3.5 rounded-full bg-blue-600 shadow-2xs"></span>
-                <span class="text-slate-700 dark:text-slate-200 font-medium">UAGRM Azul/Rojo</span>
+                <div class="flex items-center space-x-2.5">
+                  <span class="w-4 h-4 rounded-full bg-orange-500 shadow-xs"></span>
+                  <span class="text-slate-700 dark:text-slate-200">🎈 Niños (Lúdico / Cálido)</span>
+                </div>
+                <span v-if="state.theme === 'ninos'" class="text-orange-600 font-bold text-xs">✓</span>
+              </button>
+
+              <!-- Tema Jóvenes -->
+              <button
+                @click="seleccionarTema('jovenes')"
+                class="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
+                :class="state.theme === 'jovenes' ? 'bg-sky-50/80 dark:bg-sky-950/40 font-bold' : ''"
+              >
+                <div class="flex items-center space-x-2.5">
+                  <span class="w-4 h-4 rounded-full bg-sky-500 shadow-xs"></span>
+                  <span class="text-slate-700 dark:text-slate-200">⚡ Jóvenes (Cian Tecnológico)</span>
+                </div>
+                <span v-if="state.theme === 'jovenes'" class="text-sky-600 font-bold text-xs">✓</span>
+              </button>
+
+              <!-- Tema Adultos -->
+              <button
+                @click="seleccionarTema('adultos')"
+                class="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
+                :class="state.theme === 'adultos' ? 'bg-slate-100 dark:bg-slate-800 font-bold' : ''"
+              >
+                <div class="flex items-center space-x-2.5">
+                  <span class="w-4 h-4 rounded-full bg-slate-700 shadow-xs"></span>
+                  <span class="text-slate-700 dark:text-slate-200">🏛️ Adultos (Formal / Sobrio)</span>
+                </div>
+                <span v-if="state.theme === 'adultos'" class="text-slate-800 dark:text-slate-200 font-bold text-xs">✓</span>
+              </button>
+
+              <div class="my-1 border-t border-slate-100 dark:border-slate-800"></div>
+              <p class="px-3.5 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Paletas Universitarias M3</p>
+
+              <button
+                @click="seleccionarTema('uagrm')"
+                class="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
+                :class="state.theme === 'uagrm' ? 'bg-blue-50/70 dark:bg-blue-950/40 font-bold' : ''"
+              >
+                <div class="flex items-center space-x-2.5">
+                  <span class="w-4 h-4 rounded-full bg-blue-600 shadow-xs"></span>
+                  <span class="text-slate-700 dark:text-slate-200">UAGRM Azul Institucional</span>
+                </div>
+                <span v-if="state.theme === 'uagrm'" class="text-blue-600 text-xs">✓</span>
               </button>
               <button
-                @click="actions.setTheme('emerald')"
-                class="w-full text-left px-3.5 py-2 text-xs flex items-center space-x-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
+                @click="seleccionarTema('emerald')"
+                class="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
+                :class="state.theme === 'emerald' ? 'bg-emerald-50/70 dark:bg-emerald-950/40 font-bold' : ''"
               >
-                <span class="w-3.5 h-3.5 rounded-full bg-emerald-600 shadow-2xs"></span>
-                <span class="text-slate-700 dark:text-slate-200 font-medium">Esmeralda Académico</span>
+                <div class="flex items-center space-x-2.5">
+                  <span class="w-4 h-4 rounded-full bg-emerald-600 shadow-xs"></span>
+                  <span class="text-slate-700 dark:text-slate-200">Esmeralda Académico</span>
+                </div>
+                <span v-if="state.theme === 'emerald'" class="text-emerald-600 text-xs">✓</span>
               </button>
               <button
-                @click="actions.setTheme('indigo')"
-                class="w-full text-left px-3.5 py-2 text-xs flex items-center space-x-2.5 hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
+                @click="seleccionarTema('indigo')"
+                class="w-full text-left px-3.5 py-2 text-xs flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800 transition cursor-pointer"
+                :class="state.theme === 'indigo' ? 'bg-indigo-50/70 dark:bg-indigo-950/40 font-bold' : ''"
               >
-                <span class="w-3.5 h-3.5 rounded-full bg-indigo-600 shadow-2xs"></span>
-                <span class="text-slate-700 dark:text-slate-200 font-medium">Índigo Moderno</span>
+                <div class="flex items-center space-x-2.5">
+                  <span class="w-4 h-4 rounded-full bg-indigo-600 shadow-xs"></span>
+                  <span class="text-slate-700 dark:text-slate-200">Índigo Moderno</span>
+                </div>
+                <span v-if="state.theme === 'indigo'" class="text-indigo-600 text-xs">✓</span>
               </button>
             </div>
           </div>
@@ -119,19 +179,31 @@
             </svg>
           </button>
 
-          <!-- Botón Modo Oscuro / Claro Material 3 -->
-          <button
-            @click="actions.toggleDark()"
-            class="p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
-            :title="state.isDark ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'"
-          >
-            <svg v-if="state.isDark" class="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" />
-            </svg>
-            <svg v-else class="w-4 h-4 text-slate-700" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-            </svg>
-          </button>
+          <!-- Selector de Modo Día / Noche (Manual + Automático por Horario) -->
+          <div class="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-full border border-slate-200 dark:border-slate-700">
+            <!-- Botón Manual Sol / Luna -->
+            <button
+              @click="actions.toggleDark()"
+              class="p-1.5 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
+              :title="state.isDark ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'"
+            >
+              <svg v-if="state.isDark" class="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" />
+              </svg>
+              <svg v-else class="w-4 h-4 text-slate-700" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+              </svg>
+            </button>
+            <!-- Interruptor Modo Automático por Horario (19:00 a 06:00) -->
+            <button
+              @click="actions.toggleAutoDark()"
+              :class="state.autoDarkSchedule ? 'bg-blue-600 text-white font-extrabold shadow-2xs' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'"
+              class="px-2 py-0.5 text-[10px] rounded-full transition cursor-pointer"
+              title="Modo Automático: Oscuro de noche (19:00 a 06:00), Claro de día"
+            >
+              AUTO
+            </button>
+          </div>
 
           <!-- Perfil o Login -->
           <div v-if="state.user" class="flex items-center space-x-2 pl-2 border-l border-slate-200 dark:border-slate-800">
@@ -164,8 +236,15 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { ref, computed } from 'vue';
 import { state, actions } from '../stores/appState';
+
+const themeMenuOpen = ref(false);
+
+function seleccionarTema(tema) {
+  actions.setTheme(tema);
+  themeMenuOpen.value = false;
+}
 
 const themeBulletClass = computed(() => {
   switch (state.theme) {

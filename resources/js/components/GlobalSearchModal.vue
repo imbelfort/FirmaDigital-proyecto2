@@ -23,89 +23,165 @@
 
       <!-- Resultados -->
       <div v-if="loading" class="p-8 text-center text-slate-500">
-        <div class="inline-block animate-spin rounded-full h-6 w-6 border-2 border-primary-500 border-t-transparent"></div>
-        <p class="mt-2 text-sm">Buscando en tiempo real...</p>
+        <div class="inline-block animate-spin rounded-full h-6 w-6 border-2 border-blue-600 border-t-transparent"></div>
+        <p class="mt-2 text-sm font-medium">Buscando en todo el sistema...</p>
       </div>
 
-      <div v-else-if="hasResults" class="max-h-96 overflow-y-auto p-3 space-y-4">
-        <!-- Opciones del Sistema -->
-        <div v-if="results.opciones_sistema.length > 0">
-          <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3 mb-1">Opciones y Módulos</h3>
+      <div v-else-if="hasResults" class="max-h-[75vh] overflow-y-auto p-3 space-y-4">
+        
+        <!-- Acciones Directas y Temas (Ej. Activar Modo Oscuro, Temas, Navegación Rápida) -->
+        <div v-if="results.acciones_sistema.length > 0">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3 mb-1.5 flex items-center justify-between">
+            <span>Acciones Rápidas & Ajustes del Sistema</span>
+            <span class="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-500">{{ results.acciones_sistema.length }}</span>
+          </h3>
           <div class="space-y-1">
             <button
-              v-for="opc in results.opciones_sistema"
-              :key="opc.ruta"
-              @click="selectOption(opc.ruta)"
-              class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-left transition"
+              v-for="opc in results.acciones_sistema"
+              :key="opc.titulo"
+              @click="ejecutarAccion(opc)"
+              class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl hover:bg-blue-50/70 dark:hover:bg-slate-800 text-left transition cursor-pointer group"
             >
               <div class="flex items-center space-x-3">
-                <span class="p-1.5 rounded-md bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400">
+                <span class="p-2 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition">
                   <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                 </span>
-                <span class="font-medium text-slate-800 dark:text-slate-200 text-sm">{{ opc.titulo }}</span>
+                <div>
+                  <span class="font-bold text-slate-800 dark:text-slate-100 text-sm block">{{ opc.titulo }}</span>
+                  <span class="text-[11px] text-slate-400">Clic para aplicar inmediatamente</span>
+                </div>
               </div>
-              <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500">{{ opc.categoria }}</span>
+              <span class="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                {{ opc.categoria }}
+              </span>
             </button>
           </div>
         </div>
 
-        <!-- Trámites -->
+        <!-- Tipos de Trámites Oficiales (Catálogo para Iniciar) -->
+        <div v-if="results.tipos_tramite.length > 0">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3 mb-1.5 flex items-center justify-between">
+            <span>Trámites Académicos Disponibles para Solicitar</span>
+            <span class="text-[10px] bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded font-bold">{{ results.tipos_tramite.length }}</span>
+          </h3>
+          <div class="space-y-1">
+            <button
+              v-for="tipo in results.tipos_tramite"
+              :key="tipo.id"
+              @click="seleccionarTipoTramite(tipo)"
+              class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl hover:bg-emerald-50/60 dark:hover:bg-slate-800 text-left transition cursor-pointer border border-transparent hover:border-emerald-300 dark:hover:border-emerald-800"
+            >
+              <div>
+                <div class="flex items-center space-x-2">
+                  <span class="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-blue-600 dark:text-blue-400">{{ tipo.codigo }}</span>
+                  <span class="font-bold text-slate-900 dark:text-white text-sm">{{ tipo.nombre }}</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-0.5 line-clamp-1">{{ tipo.descripcion }}</p>
+              </div>
+              <div class="text-right pl-3 shrink-0">
+                <span class="text-xs font-black text-emerald-600 dark:text-emerald-400">Bs. {{ tipo.costo_bs }}</span>
+                <span class="block text-[10px] text-slate-400">Solicitar →</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Trámites y Expedientes (Nuevos, en Proceso o Terminados) -->
         <div v-if="results.tramites.length > 0">
-          <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3 mb-1">Trámites Registrados</h3>
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3 mb-1.5 flex items-center justify-between">
+            <span>Expedientes y Trámites (Historial Completo)</span>
+            <span class="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-500">{{ results.tramites.length }}</span>
+          </h3>
           <div class="space-y-1">
             <button
               v-for="tr in results.tramites"
               :key="tr.id"
               @click="selectTramite(tr)"
-              class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-left transition"
+              class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-left transition cursor-pointer"
             >
               <div>
                 <div class="flex items-center space-x-2">
-                  <span class="font-mono text-xs font-bold text-blue-600 dark:text-blue-400">{{ tr.codigo_tramite }}</span>
-                  <span class="text-sm font-medium text-slate-800 dark:text-slate-200">{{ tr.asunto }}</span>
+                  <span class="font-mono text-xs font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded-md">{{ tr.codigo_tramite }}</span>
+                  <span class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ tr.asunto }}</span>
                 </div>
-                <p class="text-xs text-slate-500 mt-0.5">Solicitante: {{ tr.solicitante ? tr.solicitante.nombre + ' ' + tr.solicitante.apellidos : 'N/A' }}</p>
+                <p class="text-xs text-slate-500 mt-0.5">
+                  Solicitante: <strong class="text-slate-700 dark:text-slate-300">{{ tr.solicitante ? tr.solicitante.nombre + ' ' + tr.solicitante.apellidos : 'N/A' }}</strong> 
+                  <span v-if="tr.solicitante" class="font-mono text-[11px] text-slate-400"> (Reg: {{ tr.solicitante.registro }} | CI: {{ tr.solicitante.ci }})</span>
+                </p>
               </div>
-              <span class="text-xs font-semibold px-2 py-0.5 rounded-full" :class="getEstadoBadge(tr.estado)">{{ tr.estado }}</span>
+              <div class="text-right shrink-0 pl-2">
+                <span class="text-[11px] font-bold px-2.5 py-1 rounded-full uppercase inline-block" :class="getEstadoBadge(tr.estado)">
+                  {{ formatEstado(tr.estado) }}
+                </span>
+                <span class="block text-[10px] font-mono text-slate-400 mt-1">
+                  {{ tr.pago && tr.pago.estado === 'COMPLETADO' ? 'Bs. ' + (tr.tipo_tramite ? tr.tipo_tramite.costo_bs : '0') + ' (Pagado)' : 'Pendiente Pago' }}
+                </span>
+              </div>
             </button>
           </div>
         </div>
 
-        <!-- Usuarios -->
+        <!-- Usuarios con sus Trámites Asociados (Para Alumnos, Docentes, Encargados) -->
         <div v-if="results.usuarios.length > 0">
-          <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3 mb-1">Usuarios y Autoridades</h3>
-          <div class="space-y-1">
-            <button
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3 mb-1.5 flex items-center justify-between">
+            <span>Personas (Alumnos, Docentes, Personal)</span>
+            <span class="text-[10px] bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-500">{{ results.usuarios.length }}</span>
+          </h3>
+          <div class="space-y-1.5">
+            <div
               v-for="u in results.usuarios"
               :key="u.id_usuario"
-              @click="selectUsuario(u)"
-              class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-left transition"
+              class="p-3 rounded-xl bg-slate-50/70 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 space-y-2"
             >
-              <div>
-                <p class="text-sm font-medium text-slate-800 dark:text-slate-200">{{ u.nombre }} {{ u.apellidos }}</p>
-                <p class="text-xs text-slate-500">Reg: {{ u.registro }} | CI: {{ u.ci }} | {{ u.unidad_academica || u.cargo || 'UAGRM' }}</p>
+              <div class="flex items-center justify-between">
+                <div>
+                  <p class="text-sm font-bold text-slate-900 dark:text-white">
+                    {{ u.nombre }} {{ u.apellidos }}
+                  </p>
+                  <p class="text-xs text-slate-500">
+                    Reg/Código: <span class="font-mono font-bold text-slate-700 dark:text-slate-300">{{ u.registro }}</span> | C.I.: <span class="font-mono">{{ u.ci }}</span> | {{ u.unidad_academica || u.cargo || 'UAGRM' }}
+                  </p>
+                </div>
+                <span class="text-xs px-2.5 py-0.5 rounded-full font-bold font-mono bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
+                  {{ u.rol }}
+                </span>
               </div>
-              <span class="text-xs px-2 py-0.5 rounded font-mono bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300">{{ u.rol }}</span>
-            </button>
+
+              <!-- Trámites Recientes de este Usuario (si los tiene) -->
+              <div v-if="u.tramites && u.tramites.length > 0" class="pt-2 border-t border-slate-200/50 dark:border-slate-700/50 space-y-1">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Trámites iniciados por este usuario:</span>
+                <div v-for="ut in u.tramites" :key="ut.id" class="flex items-center justify-between text-xs p-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700">
+                  <div class="truncate max-w-[320px]">
+                    <span class="font-mono text-[10px] font-bold text-blue-600 dark:text-blue-400 mr-1.5">{{ ut.codigo_tramite }}</span>
+                    <span class="font-medium text-slate-800 dark:text-slate-200">{{ ut.asunto }}</span>
+                  </div>
+                  <span class="text-[10px] font-bold px-2 py-0.2 rounded-full" :class="getEstadoBadge(ut.estado)">{{ formatEstado(ut.estado) }}</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Certificados Oficiales -->
+        <!-- Certificados Oficiales con QR -->
         <div v-if="results.certificados.length > 0">
-          <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3 mb-1">Certificados con Firma Digital QR</h3>
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3 mb-1.5 flex items-center justify-between">
+            <span>Certificados Oficiales con Firma Digital ADSIB / QR</span>
+            <span class="text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.5 rounded font-bold">{{ results.certificados.length }}</span>
+          </h3>
           <div class="space-y-1">
-            <button
+            <div
               v-for="c in results.certificados"
               :key="c.id"
-              @click="selectCertificado(c)"
-              class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-left transition"
+              class="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/60 text-left"
             >
               <div>
-                <p class="text-sm font-medium text-slate-800 dark:text-slate-200">{{ c.titulo_documento }}</p>
-                <p class="text-xs font-mono text-emerald-600 dark:text-emerald-400">UUID: {{ c.codigo_verificacion }}</p>
+                <p class="text-sm font-bold text-slate-900 dark:text-white">{{ c.titulo_documento }}</p>
+                <p class="text-xs font-mono text-emerald-700 dark:text-emerald-400">UUID: {{ c.codigo_verificacion }}</p>
               </div>
-              <span class="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">VALIDADO</span>
-            </button>
+              <span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-600 text-white shadow-xs">
+                DOCUMENTO FIRMADO Y VIGENTE
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -131,7 +207,8 @@ const query = ref('');
 const loading = ref(false);
 const searchInput = ref(null);
 const results = ref({
-  opciones_sistema: [],
+  acciones_sistema: [],
+  tipos_tramite: [],
   tramites: [],
   usuarios: [],
   certificados: [],
@@ -142,47 +219,81 @@ let debounceTimer = null;
 function handleInput() {
   clearTimeout(debounceTimer);
   if (query.value.trim().length < 2) {
-    results.value = { opciones_sistema: [], tramites: [], usuarios: [], certificados: [] };
+    results.value = { acciones_sistema: [], tipos_tramite: [], tramites: [], usuarios: [], certificados: [] };
     return;
   }
   loading.value = true;
   debounceTimer = setTimeout(async () => {
     try {
-      const res = await axios.get('/api/search', { params: { q: query.value } });
+      const res = await axios.get('/api/search', {
+        params: {
+          q: query.value,
+          usuario_id: state.user?.id_usuario
+        }
+      });
       results.value = res.data.results;
     } catch (e) {
       console.error(e);
     } finally {
       loading.value = false;
     }
-  }, 250);
+  }, 200);
 }
 
 const hasResults = computed(() => {
-  return results.value.opciones_sistema.length > 0 ||
-         results.value.tramites.length > 0 ||
-         results.value.usuarios.length > 0 ||
-         results.value.certificados.length > 0;
+  return (results.value.acciones_sistema && results.value.acciones_sistema.length > 0) ||
+         (results.value.tipos_tramite && results.value.tipos_tramite.length > 0) ||
+         (results.value.tramites && results.value.tramites.length > 0) ||
+         (results.value.usuarios && results.value.usuarios.length > 0) ||
+         (results.value.certificados && results.value.certificados.length > 0);
 });
 
-function selectOption(ruta) {
-  actions.setActiveTab(ruta);
+function ejecutarAccion(opc) {
   actions.closeGlobalSearch();
+  switch (opc.tipo) {
+    case 'ACCION_DARK':
+      actions.toggleDark();
+      break;
+    case 'ACCION_CONTRASTE':
+      actions.toggleContrast();
+      break;
+    case 'TEMA_UAGRM':
+      actions.setTheme('uagrm');
+      break;
+    case 'TEMA_EMERALD':
+      actions.setTheme('emerald');
+      break;
+    case 'TEMA_INDIGO':
+      actions.setTheme('indigo');
+      break;
+    case 'FONT_NORMAL':
+      actions.setFontSize('font-normal');
+      break;
+    case 'FONT_LG':
+      actions.setFontSize('font-lg');
+      break;
+    case 'RUTA_REPORTES':
+      actions.setActiveTab('reportes');
+      break;
+    default:
+      actions.setActiveTab('dashboard');
+      break;
+  }
+}
+
+function seleccionarTipoTramite(tipo) {
+  actions.closeGlobalSearch();
+  actions.setActiveTab('dashboard');
 }
 
 function selectTramite(tr) {
-  actions.setActiveTab('tramites');
   actions.closeGlobalSearch();
+  actions.setActiveTab('dashboard');
 }
 
-function selectUsuario(u) {
-  actions.setActiveTab('usuarios');
-  actions.closeGlobalSearch();
-}
-
-function selectCertificado(c) {
-  actions.setActiveTab('monitoreo-sla');
-  actions.closeGlobalSearch();
+function formatEstado(texto) {
+  if (!texto) return '';
+  return texto.split('_').map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
 }
 
 function getEstadoBadge(estado) {

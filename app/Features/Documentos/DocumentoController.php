@@ -20,6 +20,16 @@ class DocumentoController
 
         $tramite = Tramite::findOrFail($request->id_tramite);
 
+        // Regla de Negocio Procesal:
+        // Solo se permite adjuntar documentos si el trámite está en etapa inicial (INICIADO) o en subsanación (OBSERVADO).
+        // En REQUISITOS_VALIDADOS, EXPEDIENTE_COMPILADO, EN_FIRMA o FIRMADO/DESPACHADO no se admiten alteraciones documentales.
+        if (!in_array($tramite->estado, ['INICIADO', 'OBSERVADO'])) {
+            return response()->json([
+                'success' => false,
+                'message' => "No se pueden adjuntar documentos. El trámite se encuentra en estado procesal '{$tramite->estado}' y el expediente está cerrado para edición.",
+            ], 422);
+        }
+
         $archivoUrl = $request->archivo_url;
         $hash = hash('sha256', $request->nombre_documento . time());
 
