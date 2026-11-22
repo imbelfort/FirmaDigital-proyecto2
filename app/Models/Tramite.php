@@ -30,6 +30,11 @@ class Tramite extends Model
         return $this->belongsTo(TipoTramite::class, 'id_tipo_tramite');
     }
 
+    public function pago()
+    {
+        return $this->hasOne(PagoTramite::class, 'id_tramite');
+    }
+
     public function documentos()
     {
         return $this->hasMany(DocumentoExpediente::class, 'id_tramite');

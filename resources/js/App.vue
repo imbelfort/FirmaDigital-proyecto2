@@ -11,8 +11,8 @@
 
       <!-- Vistas según el Rol del Usuario Autenticado -->
       <template v-else>
-        <!-- Menú de Navegación Rápida -->
-        <div class="flex items-center space-x-2 overflow-x-auto pb-4 mb-6 border-b border-slate-200 dark:border-slate-800">
+        <!-- Menú de Navegación Rápida (El alumno solo ve su panel de estudiante, sin métricas internas de funcionarios) -->
+        <div v-if="state.user.rol !== 'ALUMNO'" class="flex items-center space-x-2 overflow-x-auto pb-4 mb-6 border-b border-slate-200 dark:border-slate-800">
           <button
             @click="actions.setActiveTab('dashboard')"
             :class="state.activeTab === 'dashboard' ? 'bg-blue-600 text-white shadow-sm' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'"

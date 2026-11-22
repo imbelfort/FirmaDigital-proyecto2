@@ -9,6 +9,7 @@ use App\Features\FirmaDigital\FirmaController;
 use App\Features\SeguimientoSla\SeguimientoSlaController;
 use App\Features\Reportes\ReporteController;
 use App\Features\BusquedaGlobal\BusquedaGlobalController;
+use App\Features\Pagos\PagoController;
 
 // Autenticación
 Route::prefix('auth')->group(function () {
@@ -32,10 +33,20 @@ Route::prefix('usuarios')->group(function () {
 Route::prefix('tramites')->group(function () {
     Route::get('/', [TramiteController::class, 'index']);
     Route::get('/tipos', [TramiteController::class, 'tiposTramite']);
+    Route::post('/tipos', [TramiteController::class, 'storeTipoTramite']);
+    Route::put('/tipos/{id}', [TramiteController::class, 'updateTipoTramite']);
     Route::post('/', [TramiteController::class, 'store']);
     Route::post('/{id}/flujo', [TramiteController::class, 'avanzarFlujo']);
     Route::post('/{id}/observaciones', [TramiteController::class, 'agregarObservacion']);
     Route::post('/observaciones/{id}/subsanar', [TramiteController::class, 'subsanarObservacion']);
+});
+
+// Pagos (PagoFacil QR)
+Route::prefix('pagos')->group(function () {
+    Route::post('/tramite/{id}/generar-qr', [PagoController::class, 'generarQr']);
+    Route::post('/tramite/{id}/verificar', [PagoController::class, 'verificarEstadoPago']);
+    Route::post('/tramite/{id}/confirmar', [PagoController::class, 'confirmarPago']);
+    Route::post('/callback', [PagoController::class, 'callback']);
 });
 
 // Documentos del Expediente

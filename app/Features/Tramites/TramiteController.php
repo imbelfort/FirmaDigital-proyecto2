@@ -19,6 +19,7 @@ class TramiteController
         $query = Tramite::with([
             'solicitante',
             'tipoTramite',
+            'pago',
             'documentos',
             'flujos.responsable',
             'observaciones.usuario',
@@ -64,17 +65,67 @@ class TramiteController
         ]);
     }
 
+    public function storeTipoTramite(Request $request)
+    {
+        $request->validate([
+            'codigo' => 'required|string|unique:tipo_tramite,codigo|max:50',
+            'nombre' => 'required|string|max:150',
+            'descripcion' => 'nullable|string',
+            'tiempo_sla_horas' => 'required|integer|min:1',
+            'costo_bs' => 'required|numeric|min:0',
+        ]);
+
+        $tipo = TipoTramite::create([
+            'codigo' => strtoupper($request->codigo),
+            'nombre' => $request->nombre,
+            'descripcion' => $request->descripcion,
+            'tiempo_sla_horas' => $request->tiempo_sla_horas,
+            'costo_bs' => $request->costo_bs,
+            'estado' => 'ACTIVO',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Tipo de trámite {$tipo->nombre} creado exitosamente.",
+            'data' => $tipo,
+        ]);
+    }
+
+    public function updateTipoTramite(Request $request, $id)
+    {
+        $tipo = TipoTramite::findOrFail($id);
+
+        $tipo->update([
+            'nombre' => $request->nombre ?? $tipo->nombre,
+            'descripcion' => $request->descripcion ?? $tipo->descripcion,
+            'tiempo_sla_horas' => $request->tiempo_sla_horas ?? $tipo->tiempo_sla_horas,
+            'costo_bs' => $request->costo_bs ?? $tipo->costo_bs,
+            'estado' => $request->estado ?? $tipo->estado,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Tipo de trámite actualizado correctamente.',
+            'data' => $tipo,
+        ]);
+    }
+
     public function store(Request $request)
     {
         $request->validate([
             'id_tipo_tramite' => 'required|exists:tipo_tramite,id',
-            'asunto' => 'required|string|max:200',
+            'asunto' => 'nullable|string|max:200',
         ]);
 
         $solicitanteId = $request->id_usuario_solicitante ?? session('usuario')->id_usuario ?? 4;
         $tipo = TipoTramite::findOrFail($request->id_tipo_tramite);
+        $usuario = \App\Models\Usuario::find($solicitanteId);
 
-        return DB::transaction(function () use ($request, $solicitanteId, $tipo) {
+        // Si el asunto viene vacío o no se envía, se autollena con el nombre oficial del trámite - Registro del usuario
+        $registroTexto = ($usuario && $usuario->registro) ? (' - ' . $usuario->registro) : '';
+        $asunto = !empty(trim($request->asunto ?? '')) ? trim($request->asunto) : ('Solicitud de ' . $tipo->nombre . $registroTexto);
+
+        return DB::transaction(function () use ($request, $solicitanteId, $tipo, $asunto) {
             $totalCount = Tramite::count() + 1;
             $codigo = 'TR-' . date('Y') . '-' . str_pad($totalCount, 4, '0', STR_PAD_LEFT);
 
@@ -82,7 +133,7 @@ class TramiteController
                 'codigo_tramite' => $codigo,
                 'id_usuario_solicitante' => $solicitanteId,
                 'id_tipo_tramite' => $tipo->id,
-                'asunto' => $request->asunto,
+                'asunto' => $asunto,
                 'estado' => 'INICIADO',
                 'prioridad' => $request->prioridad ?? 'NORMAL',
                 'fecha_solicitud' => now(),
