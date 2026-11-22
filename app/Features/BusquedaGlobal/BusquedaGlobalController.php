@@ -31,7 +31,7 @@ class BusquedaGlobalController
             ]);
         }
 
-        // 1. Acciones del Sistema, Ajustes de Visualización (Modo Oscuro, Accesibilidad, Temas) y Menús
+        // 1. Acciones de Configuración de Interfaz y Accesibilidad (Modo Oscuro, Alto Contraste, Temas)
         $accionesSistema = [
             // Acciones directas de interfaz / Accesibilidad
             ['titulo' => 'Activar / Alternar Modo Oscuro', 'categoria' => 'Ajuste Visual', 'tipo' => 'ACCION_DARK', 'icono' => 'Moon', 'keywords' => 'modo oscuro dark mode noche luz tema'],
@@ -41,21 +41,12 @@ class BusquedaGlobalController
             ['titulo' => 'Cambiar Tema: Índigo Moderno', 'categoria' => 'Tema Visual', 'tipo' => 'TEMA_INDIGO', 'icono' => 'Palette', 'keywords' => 'tema indigo violeta purpura color'],
             ['titulo' => 'Ajustar Tamaño de Letra: Normal (16px)', 'categoria' => 'Accesibilidad', 'tipo' => 'FONT_NORMAL', 'icono' => 'Type', 'keywords' => 'tamaño fuente letra normal texto'],
             ['titulo' => 'Ajustar Tamaño de Letra: Grande (18.5px)', 'categoria' => 'Accesibilidad', 'tipo' => 'FONT_LG', 'icono' => 'Type', 'keywords' => 'tamaño fuente letra grande zoom texto'],
-
-            // Módulos y Navegación
-            ['titulo' => 'Nuevo Trámite de Titulación Académica', 'categoria' => 'Trámite', 'tipo' => 'RUTA_NUEVO_TRAMITE', 'icono' => 'FilePlus', 'keywords' => 'nuevo tramite solicitar diploma titulo notas convalidacion'],
-            ['titulo' => 'Mi Historial de Trámites Solicitados', 'categoria' => 'Mis Trámites', 'tipo' => 'RUTA_HISTORIAL', 'icono' => 'History', 'keywords' => 'historial mis tramites solicitudes seguimiento'],
-            ['titulo' => 'Ver Mis Pagos Realizados (Gastos)', 'categoria' => 'Pagos', 'tipo' => 'RUTA_PAGOS', 'icono' => 'CreditCard', 'keywords' => 'pagos arancel gastos qr pagofacil recibos'],
         ];
 
-        // Solo personal/administrador ve accesos a monitoreo SLA, administración de trámites y usuarios
+        // Solo personal/administrador ve accesos a monitoreo SLA
         if (!$esAlumno) {
             $accionesSistema = array_merge($accionesSistema, [
-                ['titulo' => 'Bandeja de Firma Digital Consolidada', 'categoria' => 'Firma VR', 'tipo' => 'RUTA_FIRMA', 'icono' => 'PenTool', 'keywords' => 'firma digital vicerrector lote adsib token rsa'],
-                ['titulo' => 'Monitoreo de Tiempos y Alertas SLA (72h)', 'categoria' => 'Monitoreo', 'tipo' => 'RUTA_REPORTES', 'icono' => 'Clock', 'keywords' => 'sla 72 horas demoras alertas tiempo'],
-                ['titulo' => 'Reportes y Estadísticas Vicerrectorales', 'categoria' => 'Reportes', 'tipo' => 'RUTA_REPORTES', 'icono' => 'BarChart3', 'keywords' => 'reportes estadisticas kpis indicadores gestion'],
-                ['titulo' => 'Gestión de Tipos de Trámites y Aranceles Bs', 'categoria' => 'Administración', 'tipo' => 'RUTA_ADMIN_TRAMITES', 'icono' => 'Settings', 'keywords' => 'tipos tramites aranceles precios bs crear catalogo'],
-                ['titulo' => 'Gestión de Usuarios (Alumnos, Docentes, Personal)', 'categoria' => 'Administración', 'tipo' => 'RUTA_ADMIN_USUARIOS', 'icono' => 'Users', 'keywords' => 'usuarios estudiantes docentes personal crear cuentas'],
+                ['titulo' => 'Monitoreo de Tiempos y Alertas SLA (72h)', 'categoria' => 'Monitoreo', 'tipo' => 'RUTA_REPORTES', 'icono' => 'Clock', 'keywords' => 'sla 72 horas demoras alertas tiempo reportes metricas'],
             ]);
         }
 
@@ -67,13 +58,19 @@ class BusquedaGlobalController
         });
 
         // 2. Tipos de Trámites del Catálogo Oficial
-        $tiposTramite = TipoTramite::where(function ($query) use ($q) {
-                $query->where('nombre', 'ilike', "%{$q}%")
-                      ->orWhere('codigo', 'ilike', "%{$q}%")
-                      ->orWhere('descripcion', 'ilike', "%{$q}%");
-            })
-            ->limit(5)
-            ->get();
+        // RESTRICCIÓN POR ROL: El catálogo para "Solicitar Trámite" SOLO corresponde a ALUMNO o DOCENTE.
+        // Un Administrador General, Encargado o Vicerrector NO solicita trámites; ellos gestionan, auditan y firman expedientes.
+        $puedeSolicitar = $usuarioActual && in_array($usuarioActual->rol, ['ALUMNO', 'DOCENTE']);
+        $tiposTramite = [];
+        if ($puedeSolicitar) {
+            $tiposTramite = TipoTramite::where(function ($query) use ($q) {
+                    $query->where('nombre', 'ilike', "%{$q}%")
+                          ->orWhere('codigo', 'ilike', "%{$q}%")
+                          ->orWhere('descripcion', 'ilike', "%{$q}%");
+                })
+                ->limit(5)
+                ->get();
+        }
 
         // 3. Trámites / Expedientes Registrados
         // PRIVACIDAD ESTRICTA: El alumno SOLO puede ver sus propios trámites (no los de otros estudiantes).

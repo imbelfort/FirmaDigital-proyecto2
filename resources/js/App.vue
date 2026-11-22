@@ -37,17 +37,17 @@
 
         <!-- Vistas especializadas por Rol -->
         <template v-else>
-          <!-- Rol Alumno -->
-          <AlumnoDashboard v-if="state.user.rol === 'ALUMNO'" />
+          <!-- Rol Alumno o Docente (misma vista de autogestión de trámites según requerimiento) -->
+          <AlumnoDashboard v-if="state.user.rol === 'ALUMNO' || state.user.rol === 'DOCENTE'" />
 
           <!-- Rol Vicerrector -->
           <VicerrectorDashboard v-else-if="state.user.rol === 'VICERRECTOR'" />
 
-          <!-- Rol Encargado / Administrativo -->
-          <EncargadoDashboard v-else-if="state.user.rol === 'ENCARGADO' || state.user.rol === 'ADMINISTRATIVO'" />
+          <!-- Rol Administrador General -->
+          <AdminDashboard v-else-if="state.user.rol === 'ADMINISTRATIVO'" />
 
-          <!-- Rol Docente -->
-          <DocenteDashboard v-else-if="state.user.rol === 'DOCENTE'" />
+          <!-- Rol Encargado Mesa de Entrada -->
+          <EncargadoDashboard v-else-if="state.user.rol === 'ENCARGADO'" />
         </template>
       </template>
 
@@ -55,6 +55,9 @@
 
     <!-- Modal de Búsqueda Global Integrado -->
     <GlobalSearchModal />
+
+    <!-- Sistema Global Reusable de Notificaciones Toast -->
+    <ToastNotification />
 
     <!-- Footer Institucional UAGRM con Contador de Visitas por Vista / Página -->
     <footer class="mt-auto border-t border-slate-200 dark:border-slate-800 py-6 text-center text-xs text-slate-500 dark:text-slate-400 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xs">
@@ -85,11 +88,12 @@ import { state, actions, applyThemeClasses } from './stores/appState';
 import axios from 'axios';
 import Navbar from './components/Navbar.vue';
 import GlobalSearchModal from './components/GlobalSearchModal.vue';
+import ToastNotification from './components/ToastNotification.vue';
 import LoginView from './views/LoginView.vue';
 import AlumnoDashboard from './views/AlumnoDashboard.vue';
 import VicerrectorDashboard from './views/VicerrectorDashboard.vue';
 import EncargadoDashboard from './views/EncargadoDashboard.vue';
-import DocenteDashboard from './views/DocenteDashboard.vue';
+import AdminDashboard from './views/AdminDashboard.vue';
 import ReportesView from './views/ReportesView.vue';
 
 const vistaNombreActual = computed(() => {

@@ -4,8 +4,10 @@
     <div class="m3-hero-gradient rounded-3xl p-6 sm:p-7 text-white shadow-xl relative overflow-hidden transition-all duration-300">
       <div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div class="flex items-center space-x-2">
-            <span class="text-2xl sm:text-3xl animate-bounce">👋</span>
+          <div class="flex items-center space-x-2.5">
+            <div class="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shadow-xs">
+              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg>
+            </div>
             <h1 class="text-2xl sm:text-3xl font-extrabold heading-font tracking-tight">
               Hola, {{ state.user.nombre }} {{ state.user.apellidos }}
             </h1>
@@ -15,8 +17,9 @@
           </p>
         </div>
         <div class="flex items-center space-x-2 self-start sm:self-center">
-          <span class="text-[11px] font-bold tracking-wider uppercase px-3.5 py-1.5 rounded-full bg-white/20 border border-white/25 backdrop-blur-md shadow-xs">
-            {{ esAdmin ? '🛡️ Administrador General' : '⚖️ Mesa de Entrada & Revisión' }}
+          <span class="text-[11px] font-bold tracking-wider uppercase px-3.5 py-1.5 rounded-full bg-white/20 border border-white/25 backdrop-blur-md shadow-xs flex items-center space-x-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+            <span>Mesa de Entrada & Revisión de Requisitos</span>
           </span>
         </div>
       </div>
@@ -26,7 +29,7 @@
       </div>
     </div>
 
-    <!-- Navegación de Pestañas M3 para el Administrador / Personal -->
+    <!-- Navegación de Pestañas M3 para el Encargado de Mesa de Entrada -->
     <div class="flex items-center space-x-2 border-b border-slate-200 dark:border-slate-800 pb-2 overflow-x-auto">
       <button
         @click="activeTab = 'todos_tramites'"
@@ -41,34 +44,6 @@
         class="pb-2.5 px-3.5 text-xs sm:text-sm transition cursor-pointer shrink-0"
       >
         Despacho de Legajos
-      </button>
-      <button
-        v-if="esAdmin"
-        @click="activeTab = 'catalogo_gestion'"
-        :class="activeTab === 'catalogo_gestion' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 font-extrabold' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'"
-        class="pb-2.5 px-3.5 text-xs sm:text-sm transition cursor-pointer shrink-0 flex items-center space-x-1.5"
-      >
-        <span>Gestión de Tipos de Trámites y Aranceles</span>
-        <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 font-bold">Admin</span>
-      </button>
-      <button
-        v-if="esAdmin"
-        @click="activeTab = 'usuarios'"
-        :class="activeTab === 'usuarios' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 font-extrabold' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'"
-        class="pb-2.5 px-3.5 text-xs sm:text-sm transition cursor-pointer shrink-0 flex items-center space-x-1.5"
-      >
-        <span>Gestión de Usuarios</span>
-        <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 font-bold">Admin</span>
-      </button>
-      <!-- Pestaña de Bitácora de Auditoría del Sistema (Exclusiva Admin) -->
-      <button
-        v-if="esAdmin"
-        @click="activeTab = 'auditoria'; cargarAuditoria()"
-        :class="activeTab === 'auditoria' ? 'border-b-2 border-red-600 text-red-600 dark:text-red-400 font-extrabold' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'"
-        class="pb-2.5 px-3.5 text-xs sm:text-sm transition cursor-pointer shrink-0 flex items-center space-x-1.5"
-      >
-        <span>🛡️ Bitácora de Auditoría & Seguridad</span>
-        <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 font-bold">Seguridad</span>
       </button>
     </div>
 
@@ -153,37 +128,80 @@
             </div>
           </div>
 
-          <!-- BOTONES PARA MOVER DE ESTADO EL TRÁMITE -->
+          <!-- BOTONES PARA MOVER DE ESTADO EL TRÁMITE (Flujo Progresivo Inteligente) -->
           <div class="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
             <span class="text-xs font-bold text-slate-700 dark:text-slate-300 block">Mover Estado Procesal:</span>
-            <div class="grid grid-cols-2 gap-2 text-xs">
+            
+            <!-- Trámite ya en etapas finales o de firma (Informativo) -->
+            <div v-if="t.estado === 'FIRMADO' || t.estado === 'DESPACHADO'" class="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 font-semibold flex items-center space-x-1.5">
+              <span>✓ Trámite finalizado procesalmente ({{ formatEstadoLegible(t.estado) }}).</span>
+            </div>
+
+            <div v-else-if="t.estado === 'EN_FIRMA'" class="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 text-xs text-purple-800 dark:text-purple-300 font-semibold flex items-center justify-between">
+              <span>⏳ En Despacho del Vicerrector para firma digital criptográfica.</span>
               <button
+                @click="openObservacion(t)"
+                :disabled="procesandoAccion"
+                class="py-1 px-2.5 bg-red-100 hover:bg-red-200 dark:bg-red-950/40 text-red-700 dark:text-red-300 font-bold rounded-lg transition cursor-pointer text-[11px]"
+              >
+                Observar
+              </button>
+            </div>
+
+            <!-- Botones dinámicos según el estado actual -->
+            <div v-else class="grid grid-cols-2 gap-2 text-xs">
+              <!-- Paso 1: Validar Requisitos (Solo habilitado si está INICIADO u OBSERVADO) -->
+              <button
+                v-if="t.estado === 'INICIADO' || t.estado === 'OBSERVADO'"
                 @click="solicitarConfirmacionAvance(t, 'Revisión y Cotejo', 'REQUISITOS_VALIDADOS')"
                 :disabled="procesandoAccion"
-                class="py-2 px-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold rounded-xl transition cursor-pointer disabled:opacity-50 text-left"
+                class="py-2 px-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition cursor-pointer disabled:opacity-50 text-left shadow-xs flex items-center justify-between"
               >
-                1. Validar Requisitos
+                <span>1. Validar Requisitos</span>
+                <span class="text-[10px] font-mono">→</span>
               </button>
+              <div
+                v-else-if="t.estado !== 'INICIADO' && t.estado !== 'OBSERVADO'"
+                class="py-2 px-2.5 bg-slate-50 dark:bg-slate-800/50 text-slate-400 dark:text-slate-500 rounded-xl text-left font-semibold border border-dashed border-slate-200 dark:border-slate-700"
+              >
+                ✓ Requisitos ya validados
+              </div>
+
+              <!-- Paso 2: Compilar Legajo (Habilitado si los requisitos están validados) -->
               <button
+                v-if="t.estado === 'REQUISITOS_VALIDADOS'"
                 @click="solicitarConfirmacionAvance(t, 'Compilación de Expediente', 'EXPEDIENTE_COMPILADO')"
                 :disabled="procesandoAccion"
-                class="py-2 px-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold rounded-xl transition cursor-pointer disabled:opacity-50 text-left"
+                class="py-2 px-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition cursor-pointer disabled:opacity-50 text-left shadow-xs flex items-center justify-between"
               >
-                2. Compilar Legajo
+                <span>2. Compilar Legajo</span>
+                <span class="text-[10px] font-mono">→</span>
               </button>
+              <div
+                v-else-if="t.estado === 'EXPEDIENTE_COMPILADO'"
+                class="py-2 px-2.5 bg-slate-50 dark:bg-slate-800/50 text-slate-400 dark:text-slate-500 rounded-xl text-left font-semibold border border-dashed border-slate-200 dark:border-slate-700"
+              >
+                ✓ Expediente ya compilado
+              </div>
+
+              <!-- Paso 3: Pasar a Firma Vicerrectoral (Habilitado cuando el expediente está compilado) -->
               <button
+                v-if="t.estado === 'EXPEDIENTE_COMPILADO'"
                 @click="solicitarConfirmacionAvance(t, 'Firma Vicerrectoral', 'EN_FIRMA')"
                 :disabled="procesandoAccion"
-                class="py-2 px-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition cursor-pointer shadow-sm disabled:opacity-50 text-left"
+                class="py-2 px-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition cursor-pointer shadow-sm disabled:opacity-50 text-left flex items-center justify-between"
               >
-                3. Pasar a Firma VR
+                <span>3. Pasar a Firma VR</span>
+                <span class="text-[10px] font-mono">✍️</span>
               </button>
+
+              <!-- Botón Observar Trámite: siempre disponible mientras no esté cerrado -->
               <button
                 @click="openObservacion(t)"
                 :disabled="procesandoAccion"
                 class="py-2 px-2.5 bg-red-100 hover:bg-red-200 dark:bg-red-950/40 text-red-700 dark:text-red-300 font-bold rounded-xl transition cursor-pointer disabled:opacity-50 text-left"
               >
-                Observar Trámite
+                ! Observar Trámite
               </button>
             </div>
           </div>
@@ -667,7 +685,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { state } from '../stores/appState';
+import { state, actions } from '../stores/appState';
 import axios from 'axios';
 
 const activeTab = ref('todos_tramites');
@@ -736,9 +754,10 @@ async function aprobarDocDirecto(doc) {
       estado_validacion: 'APROBADO',
       observacion_validacion: 'Documento aprobado conforme a requisitos oficiales.',
     });
+    actions.toast(`Documento "${doc.nombre_documento}" verificado y aprobado.`, 'success', 'Recaudo Aprobado');
     await loadData();
   } catch (e) {
-    alert(e.response?.data?.message || 'Error al aprobar el documento.');
+    actions.toast(e.response?.data?.message || 'Error al aprobar el documento.', 'error', 'Error Recaudo');
   } finally {
     procesandoAccion.value = false;
   }
@@ -769,9 +788,11 @@ async function confirmarObservarDoc() {
     }
 
     modalDocObs.value = false;
+    actions.toast(`Documento "${docEnObservacion.value.nombre_documento}" observado. Trámite notificado al estudiante.`, 'warning', 'Recaudo Observado');
     await loadData();
   } catch (e) {
     errorDocObs.value = e.response?.data?.message || 'Error al procesar la observación del documento.';
+    actions.toast(errorDocObs.value, 'error', 'Error al Observar');
   } finally {
     procesandoAccion.value = false;
   }
@@ -865,10 +886,10 @@ async function ejecutarAvanceConfirmado() {
       nuevo_estado_tramite: estadoAvanzarDestino.value,
     });
     modalConfirmarAvance.value = false;
-    alert(`Éxito: Trámite ${tramiteAvanzarInfo.value.codigo_tramite} actualizado a '${etapaAvanzarDestino.value}' (${estadoAvanzarDestino.value}).`);
+    actions.toast(`Trámite ${tramiteAvanzarInfo.value.codigo_tramite} avanzado a '${etapaAvanzarDestino.value}'.`, 'success', 'Etapa Actualizada');
     await loadData();
   } catch (e) {
-    alert(e.response?.data?.message || 'Error al avanzar el flujo procesal.');
+    actions.toast(e.response?.data?.message || 'Error al avanzar el flujo procesal.', 'error', 'Error Flujo');
   } finally {
     procesandoAccion.value = false;
   }
@@ -900,10 +921,11 @@ async function guardarObservacion() {
       descripcion: formObs.value.descripcion.trim(),
     });
     modalObs.value = false;
-    alert('Observación registrada exitosamente y trámite notificado al estudiante.');
+    actions.toast('Observación procesal registrada y trámite notificado al estudiante.', 'warning', 'Trámite Observado');
     await loadData();
   } catch (e) {
     errorObsTramite.value = e.response?.data?.message || 'Error al emitir la observación procesal.';
+    actions.toast(errorObsTramite.value, 'error', 'Error');
   } finally {
     procesandoAccion.value = false;
   }
@@ -930,10 +952,10 @@ async function guardarTipoTramite() {
       await axios.post('/api/tramites/tipos', formTipo.value);
     }
     modalTipoTramite.value = false;
-    alert('Tipo de trámite guardado exitosamente.');
+    actions.toast('Tipo de trámite guardado exitosamente.', 'success', 'Catálogo Actualizado');
     await loadData();
   } catch (e) {
-    alert(e.response?.data?.message || 'Error al guardar tipo de trámite');
+    actions.toast(e.response?.data?.message || 'Error al guardar tipo de trámite', 'error', 'Error');
   } finally {
     procesandoAccion.value = false;
   }
@@ -944,10 +966,10 @@ async function ejecutarDespacho(t, tipoEntrega) {
   procesandoAccion.value = true;
   try {
     await axios.post(`/api/firma/despacho/${t.id}`, { tipo_entrega: tipoEntrega });
-    alert('Legajo despachado y SLA cerrado exitosamente.');
+    actions.toast(`Legajo del trámite ${t.codigo_tramite} despachado exitosamente. SLA cerrado.`, 'success', 'Trámite Finalizado');
     await loadData();
   } catch (e) {
-    alert('Error al despachar legajo');
+    actions.toast(e.response?.data?.message || 'Error al despachar legajo', 'error', 'Error Despacho');
   } finally {
     procesandoAccion.value = false;
   }
@@ -959,10 +981,10 @@ async function guardarUsuario() {
   try {
     await axios.post('/api/usuarios', formUser.value);
     modalNuevoUsuario.value = false;
-    alert('Usuario creado con éxito');
+    actions.toast(`Usuario ${formUser.value.nombre} creado con éxito`, 'success', 'Usuario Creado');
     await loadData();
   } catch (e) {
-    alert(e.response?.data?.message || 'Error al crear usuario');
+    actions.toast(e.response?.data?.message || 'Error al crear usuario', 'error', 'Error');
   } finally {
     procesandoAccion.value = false;
   }

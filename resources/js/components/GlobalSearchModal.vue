@@ -58,8 +58,8 @@
           </div>
         </div>
 
-        <!-- Tipos de Trámites Oficiales (Catálogo para Iniciar) -->
-        <div v-if="results.tipos_tramite.length > 0">
+        <!-- Tipos de Trámites Oficiales (Catálogo para Iniciar - Solo visible para Alumno o Docente) -->
+        <div v-if="(state.user?.rol === 'ALUMNO' || state.user?.rol === 'DOCENTE') && results.tipos_tramite && results.tipos_tramite.length > 0">
           <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-3 mb-1.5 flex items-center justify-between">
             <span>Trámites Académicos Disponibles para Solicitar</span>
             <span class="text-[10px] bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded font-bold">{{ results.tipos_tramite.length }}</span>
@@ -253,24 +253,31 @@ function ejecutarAccion(opc) {
   switch (opc.tipo) {
     case 'ACCION_DARK':
       actions.toggleDark();
+      actions.toast('Modo de pantalla actualizado', 'info');
       break;
     case 'ACCION_CONTRASTE':
       actions.toggleContrast();
+      actions.toast('Modo alto contraste cambiado', 'info');
       break;
     case 'TEMA_UAGRM':
       actions.setTheme('uagrm');
+      actions.toast('Tema UAGRM activado', 'success');
       break;
     case 'TEMA_EMERALD':
       actions.setTheme('emerald');
+      actions.toast('Tema Esmeralda activado', 'success');
       break;
     case 'TEMA_INDIGO':
       actions.setTheme('indigo');
+      actions.toast('Tema Índigo activado', 'success');
       break;
     case 'FONT_NORMAL':
       actions.setFontSize('font-normal');
+      actions.toast('Tamaño de fuente estándar', 'info');
       break;
     case 'FONT_LG':
       actions.setFontSize('font-lg');
+      actions.toast('Tamaño de fuente aumentado', 'info');
       break;
     case 'RUTA_REPORTES':
       actions.setActiveTab('reportes');
@@ -282,13 +289,19 @@ function ejecutarAccion(opc) {
 }
 
 function seleccionarTipoTramite(tipo) {
-  actions.closeGlobalSearch();
-  actions.setActiveTab('dashboard');
+  if (state.user?.rol === 'ALUMNO' || state.user?.rol === 'DOCENTE') {
+    actions.solicitarTramiteDesdeBuscador(tipo);
+  } else {
+    actions.closeGlobalSearch();
+    actions.setActiveTab('dashboard');
+    actions.toast(`Trámite ${tipo.nombre} disponible en aranceles (Bs. ${tipo.costo_bs})`, 'info', tipo.codigo);
+  }
 }
 
 function selectTramite(tr) {
   actions.closeGlobalSearch();
   actions.setActiveTab('dashboard');
+  actions.toast(`Expediente ${tr.codigo_tramite} (${formatEstado(tr.estado)}) seleccionado`, 'info', tr.codigo_tramite);
 }
 
 function formatEstado(texto) {

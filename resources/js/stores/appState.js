@@ -42,11 +42,31 @@ export const state = reactive({
     user: savedUser,
     activeTab: 'dashboard',
     globalSearchOpen: false,
+    tramiteSeleccionadoParaSolicitar: null,
+    toasts: [],
     visitasPagina: 1,
     visitasGlobales: 1,
 });
 
+let toastIdCounter = 0;
+
 export const actions = {
+    toast(mensaje, tipo = 'info', titulo = '') {
+        const id = ++toastIdCounter;
+        state.toasts.push({ id, mensaje, tipo, titulo });
+        setTimeout(() => {
+            actions.removeToast(id);
+        }, 4000);
+    },
+    removeToast(id) {
+        state.toasts = state.toasts.filter(t => t.id !== id);
+    },
+    solicitarTramiteDesdeBuscador(tipo) {
+        state.tramiteSeleccionadoParaSolicitar = tipo;
+        state.globalSearchOpen = false;
+        state.activeTab = 'dashboard';
+        actions.toast(`Has seleccionado el trámite "${tipo.nombre}". Completa la confirmación.`, 'info', 'Iniciar Trámite');
+    },
     toggleDark() {
         // Al tocar manualmente, desactiva el automático y fija la preferencia del usuario
         state.autoDarkSchedule = false;

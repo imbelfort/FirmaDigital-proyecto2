@@ -28,31 +28,37 @@ class PagoFacilService
 
     /**
      * Paso 1: Autenticación /login
+     * Retorna array con ['token' => ?string, 'error' => ?string]
      */
-    public function login(): ?string
+    public function login(): array
     {
         if (!$this->hasCredentials()) {
-            return null;
+            return ['token' => null, 'error' => 'Credenciales no configuradas en .env'];
         }
 
         try {
-            $response = Http::withHeaders([
-                'tcTokenService' => $this->tokenService,
-                'tcTokenSecret' => $this->tokenSecret,
-                'Response-Language' => 'es',
-            ])->timeout(10)->post("{$this->baseUrl}/login");
+            $response = Http::withoutVerifying()
+                ->withHeaders([
+                    'tcTokenService' => $this->tokenService,
+                    'tcTokenSecret' => $this->tokenSecret,
+                    'Response-Language' => 'es',
+                ])
+                ->timeout(12)
+                ->post("{$this->baseUrl}/login");
 
+            $data = $response->json();
             if ($response->successful()) {
-                $data = $response->json();
                 if (($data['error'] ?? 1) === 0 && !empty($data['values']['accessToken'])) {
-                    return $data['values']['accessToken'];
+                    return ['token' => $data['values']['accessToken'], 'error' => null];
                 }
             }
+
+            $msg = $data['message'] ?? 'Código HTTP ' . $response->status() . ': Token o secreto inválido.';
+            return ['token' => null, 'error' => $msg];
         } catch (\Exception $e) {
             Log::warning('PagoFacil login exception: ' . $e->getMessage());
+            return ['token' => null, 'error' => 'Error de conexión con la pasarela: ' . $e->getMessage()];
         }
-
-        return null;
     }
 
     /**
@@ -89,12 +95,13 @@ class PagoFacilService
             ];
         }
 
-        $token = $this->login();
+        $auth = $this->login();
+        $token = $auth['token'];
 
         if (!$token) {
             return [
                 'success' => false,
-                'message' => 'Fallo de autenticación con PagoFácil: Token de servicio o secreto inválido.',
+                'message' => 'Respuesta oficial de PagoFácil: ' . ($auth['error'] ?? 'Fallo de autenticación con PagoFácil.'),
             ];
         }
 

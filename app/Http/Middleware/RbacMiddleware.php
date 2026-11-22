@@ -16,12 +16,15 @@ class RbacMiddleware
      */
     public function handle(Request $request, Closure $next, ...$roles): Response
     {
-        // 1. Obtener usuario de sesión o de header/input
+        // 1. Obtener usuario de sesión, de headers inyectados por Axios o de query/body
         $usuario = session('usuario');
-        $usuarioId = $request->header('X-User-Id') ?? $request->input('auth_usuario_id');
+        $usuarioId = $request->header('X-User-Id') ?? $request->input('auth_usuario_id') ?? $request->query('usuario_id');
         
         if (!$usuario && $usuarioId) {
             $usuario = Usuario::find($usuarioId);
+            if ($usuario) {
+                session(['usuario' => $usuario]);
+            }
         }
 
         // Si no hay usuario y se exigen roles específicos

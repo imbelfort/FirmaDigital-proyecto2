@@ -4,8 +4,10 @@
     <div class="m3-hero-gradient rounded-3xl p-6 sm:p-7 text-white shadow-lg relative overflow-hidden transition-all duration-300">
       <div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div class="flex items-center space-x-2">
-            <span class="text-2xl sm:text-3xl animate-bounce">👋</span>
+          <div class="flex items-center space-x-2.5">
+            <div class="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shadow-xs">
+              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+            </div>
             <h1 class="text-2xl sm:text-3xl font-extrabold heading-font tracking-tight">
               Hola, {{ state.user.nombre }} {{ state.user.apellidos }}
             </h1>
@@ -15,8 +17,9 @@
           </p>
         </div>
         <div class="flex items-center space-x-2 self-start sm:self-center">
-          <span class="text-[11px] font-bold tracking-wider uppercase px-3.5 py-1.5 rounded-full bg-white/20 border border-white/25 backdrop-blur-md shadow-xs">
-            {{ state.user.rol === 'DOCENTE' ? '📚 Portal Docente / Académico' : '🎓 Portal del Estudiante' }}
+          <span class="text-[11px] font-bold tracking-wider uppercase px-3.5 py-1.5 rounded-full bg-white/20 border border-white/25 backdrop-blur-md shadow-xs flex items-center space-x-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/></svg>
+            <span>{{ state.user.rol === 'DOCENTE' ? 'Portal Docente / Académico' : 'Portal del Estudiante' }}</span>
           </span>
         </div>
       </div>
@@ -720,8 +723,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { state } from '../stores/appState';
+import { ref, computed, onMounted, watch } from 'vue';
+import { state, actions } from '../stores/appState';
 import axios from 'axios';
 
 const activeSubTab = ref('mis_tramites');
@@ -872,6 +875,14 @@ function solicitarTramiteDirecto(tipo) {
   modalNuevoTramite.value = true;
 }
 
+// Escuchar si viene seleccionado un trámite desde el buscador global
+watch(() => state.tramiteSeleccionadoParaSolicitar, (nuevoTipo) => {
+  if (nuevoTipo) {
+    solicitarTramiteDirecto(nuevoTipo);
+    state.tramiteSeleccionadoParaSolicitar = null;
+  }
+}, { immediate: true });
+
 async function crearTramite() {
   if (creandoTramite.value) return;
   creandoTramite.value = true;
@@ -892,10 +903,11 @@ async function crearTramite() {
     activeSubTab.value = 'mis_tramites';
 
     if (res.data.data) {
+      actions.toast('Trámite iniciado con éxito. Procede con el pago o adjunto de requisitos.', 'success', 'Solicitud Registrada');
       abrirModalPago(res.data.data);
     }
   } catch (e) {
-    alert('Error al iniciar trámite');
+    actions.toast(e.response?.data?.message || 'Error al iniciar trámite. Por favor revise sus datos.', 'error', 'No se pudo iniciar');
   } finally {
     creandoTramite.value = false;
   }
@@ -928,14 +940,14 @@ async function verificarPagoConPagoFacil() {
   try {
     const res = await axios.post(`/api/pagos/tramite/${tramiteAPagar.value.id}/verificar`);
     if (res.data.pagado) {
-      alert(res.data.message || 'Pago confirmado y acreditado con éxito en PagoFácil.');
+      actions.toast(res.data.message || 'Pago confirmado y acreditado con éxito en PagoFácil.', 'success', 'Pago Acreditado');
       modalPagoActivo.value = false;
       await loadData();
     } else {
-      alert(res.data.message || 'El pago aún figura como pendiente en PagoFácil.');
+      actions.toast(res.data.message || 'El pago aún figura como pendiente en PagoFácil.', 'warning', 'Pago Pendiente');
     }
   } catch (e) {
-    alert(e.response?.data?.message || 'Error al verificar estado de pago en PagoFácil');
+    actions.toast(e.response?.data?.message || 'Error al verificar estado de pago en PagoFácil', 'error', 'Error Pasarela');
   } finally {
     verificandoPago.value = false;
   }
@@ -992,9 +1004,9 @@ async function guardarDocumento() {
 
     cerrarModalAdjuntar();
     await loadData();
-    alert('Documento adjuntado exitosamente con cálculo de Hash SHA-256.');
+    actions.toast('Documento adjuntado exitosamente con cálculo de Hash SHA-256.', 'success', 'Archivo Guardado');
   } catch (e) {
-    alert(e.response?.data?.message || 'Error al subir documento');
+    actions.toast(e.response?.data?.message || 'Error al subir documento', 'error', 'Error');
   } finally {
     subiendoDoc.value = false;
   }

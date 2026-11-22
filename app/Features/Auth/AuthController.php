@@ -28,9 +28,10 @@ class AuthController
             ], 401);
         }
 
-        // Verifica si la contraseña coincide (en texto plano como viene en BD o con Hash)
+        // Verifica si la contraseña coincide (en texto plano, con su C.I., con su propio código o con Hash)
         $valid = ($request->password === $usuario->password) ||
                  ($request->password === $usuario->ci) ||
+                 ($request->password === $usuario->registro) ||
                  (Hash::check($request->password, $usuario->password));
 
         if (!$valid) {

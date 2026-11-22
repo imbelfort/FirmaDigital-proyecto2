@@ -97,6 +97,17 @@ class UsuarioController
 
     public function update(Request $request, $id)
     {
+        $usuarioActual = session('usuario');
+        $usuarioIdAuth = $request->header('X-User-Id');
+        
+        // Regla de Negocio: El Administrador no puede auto-editarse desde este módulo para evitar bloqueos accidentales
+        if (($usuarioActual && $usuarioActual->id_usuario == $id) || ($usuarioIdAuth && $usuarioIdAuth == $id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Restricción de seguridad: El Administrador General no puede editar su propia cuenta desde este panel.',
+            ], 403);
+        }
+
         $usuario = Usuario::findOrFail($id);
 
         $usuario->update([
