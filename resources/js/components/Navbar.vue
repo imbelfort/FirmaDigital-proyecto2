@@ -19,6 +19,17 @@
           </div>
         </div>
 
+        <!-- Botón Acceso Rápido al Portal de Seguimiento Público con PIN (Visible siempre) -->
+        <button
+          @click="actions.setActiveTab('portal_seguimiento')"
+          :class="state.activeTab === 'portal_seguimiento' ? 'bg-blue-600 text-white font-bold shadow-xs' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'"
+          class="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border border-slate-200 dark:border-slate-700 transition cursor-pointer"
+          title="Consultar trámite externamente con PIN"
+        >
+          <svg class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+          <span>Seguimiento con PIN</span>
+        </button>
+
         <!-- Buscador Global Trigger (Solo visible cuando hay sesión iniciada) -->
         <div v-if="state.user" class="flex-1 max-w-md mx-4 block">
           <button

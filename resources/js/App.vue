@@ -6,8 +6,11 @@
     <!-- Contenido Principal Dinámico según Rol y Estado -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
       
+      <!-- Vista Pública: Portal de Seguimiento Estudiantil con PIN -->
+      <PortalSeguimientoView v-if="state.activeTab === 'portal_seguimiento'" />
+
       <!-- Si no ha iniciado sesión, o solicita la vista de Login -->
-      <LoginView v-if="!state.user || state.activeTab === 'login'" />
+      <LoginView v-else-if="!state.user || state.activeTab === 'login'" />
 
       <!-- Vistas según el Rol del Usuario Autenticado -->
       <template v-else>
@@ -90,6 +93,7 @@ import Navbar from './components/Navbar.vue';
 import GlobalSearchModal from './components/GlobalSearchModal.vue';
 import ToastNotification from './components/ToastNotification.vue';
 import LoginView from './views/LoginView.vue';
+import PortalSeguimientoView from './views/PortalSeguimientoView.vue';
 import AlumnoDashboard from './views/AlumnoDashboard.vue';
 import VicerrectorDashboard from './views/VicerrectorDashboard.vue';
 import EncargadoDashboard from './views/EncargadoDashboard.vue';
@@ -97,6 +101,7 @@ import AdminDashboard from './views/AdminDashboard.vue';
 import ReportesView from './views/ReportesView.vue';
 
 const vistaNombreActual = computed(() => {
+  if (state.activeTab === 'portal_seguimiento') return 'Portal Público de Seguimiento';
   if (!state.user || state.activeTab === 'login') return 'Login Institucional';
   if (state.activeTab === 'reportes') return 'Reportes y Métricas SLA';
   switch (state.user.rol) {

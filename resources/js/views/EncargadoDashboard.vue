@@ -100,27 +100,40 @@
                 ⚠️ <span class="font-bold">Observación:</span> {{ d.observacion_validacion || 'Documento requiere corrección por parte del estudiante.' }}
               </div>
 
-              <!-- Acciones de validación para el Encargado -->
-              <div class="flex items-center space-x-2 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+              <!-- Acciones de validación para el Encargado (Solo si el trámite NO ha concluido ni está en firma) -->
+              <div v-if="!['FIRMADO', 'DESPACHADO', 'EN_FIRMA'].includes(t.estado)" class="flex items-center space-x-2 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
                 <button
                   @click="aprobarDocDirecto(d)"
                   class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold cursor-pointer transition flex items-center space-x-1"
                   title="Aprobar Recaudo"
                 >
-                  <span>✓ Aprobar</span>
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                  <span>Aprobar</span>
                 </button>
                 <button
                   @click="abrirModalObservarDoc(t, d)"
                   class="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[10px] font-bold cursor-pointer transition flex items-center space-x-1"
                   title="Observar este documento específico con motivo obligatorio"
                 >
-                  <span>! Observar Recaudo</span>
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                  <span>Observar Recaudo</span>
                 </button>
                 <a
                   v-if="d.archivo_url"
                   :href="d.archivo_url"
                   target="_blank"
                   class="px-2 py-1 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 text-[10px] underline ml-auto"
+                >
+                  Ver archivo
+                </a>
+              </div>
+              <div v-else class="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-slate-700/60 text-[10px] text-slate-400">
+                <span class="italic font-medium">Revisión cerrada (Trámite en {{ formatEstadoLegible(t.estado) }})</span>
+                <a
+                  v-if="d.archivo_url"
+                  :href="d.archivo_url"
+                  target="_blank"
+                  class="text-blue-600 dark:text-blue-400 underline"
                 >
                   Ver archivo
                 </a>
