@@ -168,7 +168,8 @@
 
       <!-- MODO 2: BANDEJA DE TRÁMITES CON SEGUIMIENTO PROCESAL Y FILTRO POR ESTADO DE LA DB -->
       <div v-else class="space-y-4">
-        <div v-if="loading" class="p-12 text-center text-slate-500">Cargando trámites...</div>
+        <!-- Skeleton Loader mientras recupera información de los trámites -->
+        <SkeletonLoader v-if="loading" tipo="cards" :cantidad="4" />
         
         <div v-else-if="tramitesFiltrados.length === 0" class="m3-card p-10 text-center border border-slate-200 dark:border-slate-800">
           <svg class="mx-auto h-12 w-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -616,8 +617,11 @@
               alt="Código QR PagoFácil"
               class="w-48 h-48 mx-auto object-contain"
             />
-            <div v-else class="w-48 h-48 flex items-center justify-center text-slate-400 text-xs">
-              Cargando código QR...
+            <!-- Skeleton Loader específico para la carga del QR de PagoFácil -->
+            <div v-else class="w-48 h-48 flex flex-col items-center justify-center space-y-3 text-slate-400 text-xs p-4">
+              <div class="w-12 h-12 rounded-full border-4 border-orange-500 border-t-transparent animate-spin"></div>
+              <p class="font-bold text-slate-600 dark:text-slate-300">Conectando con PagoFácil...</p>
+              <p class="text-[10px] text-slate-400">Generando QR bancario dinámico</p>
             </div>
           </div>
 
@@ -746,6 +750,7 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { state, actions } from '../stores/appState';
 import axios from 'axios';
+import SkeletonLoader from '../components/SkeletonLoader.vue';
 
 const activeSubTab = ref('mis_tramites');
 const misTramites = ref([]);
@@ -959,13 +964,20 @@ async function abrirModalPago(t) {
   modalPagoActivo.value = true;
 
   try {
-    const res = await axios.post(`/api/pagos/tramite/${t.id}/generar-qr`);
+    // Configuración de timeout explícito para la petición del QR (15 segundos)
+    const res = await axios.post(`/api/pagos/tramite/${t.id}/generar-qr`, {}, {
+      timeout: 15000
+    });
     pagoData.value = {
       ...res.data.pago,
       qr_image_url: res.data.qr_image_url,
     };
   } catch (e) {
-    pagoError.value = e.response?.data?.message || 'Error al conectar con la pasarela PagoFácil.';
+    if (e.code === 'ECONNABORTED' || e.message?.includes('timeout')) {
+      pagoError.value = 'Tiempo de espera agotado al conectar con PagoFácil. La pasarela tardó en responder. Por favor intente nuevamente en unos instantes.';
+    } else {
+      pagoError.value = e.response?.data?.message || 'Error al conectar con la pasarela PagoFácil.';
+    }
   } finally {
     loadingPago.value = false;
   }

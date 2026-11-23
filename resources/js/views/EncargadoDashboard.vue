@@ -54,7 +54,14 @@
         <span class="text-xs text-slate-500">Mueve los estados procesales y valida los documentos</span>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Skeleton Loader mientras recupera los trámites en el Encargado -->
+      <SkeletonLoader v-if="loading" tipo="cards" :cantidad="4" />
+
+      <div v-else-if="tramites.length === 0" class="m3-card p-12 text-center text-slate-400 border border-slate-200 dark:border-slate-800">
+        No hay trámites registrados en la bandeja.
+      </div>
+
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div
           v-for="t in tramites"
           :key="t.id"
@@ -700,8 +707,10 @@
 import { ref, computed, onMounted } from 'vue';
 import { state, actions } from '../stores/appState';
 import axios from 'axios';
+import SkeletonLoader from '../components/SkeletonLoader.vue';
 
 const activeTab = ref('todos_tramites');
+const loading = ref(false);
 const tramites = ref([]);
 const tiposTramite = ref([]);
 const usuarios = ref([]);
@@ -847,6 +856,7 @@ function isPagado(t) {
 }
 
 async function loadData() {
+  loading.value = true;
   try {
     const [resTramites, resTipos, resUsers] = await Promise.all([
       axios.get('/api/tramites'),
@@ -858,6 +868,8 @@ async function loadData() {
     usuarios.value = resUsers.data?.data || [];
   } catch (e) {
     console.error(e);
+  } finally {
+    loading.value = false;
   }
 }
 
