@@ -42,6 +42,15 @@
       </button>
 
       <button
+        @click="activeTab = 'tipos_tramites'"
+        :class="activeTab === 'tipos_tramites' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 font-extrabold' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'"
+        class="pb-2.5 px-3.5 text-xs sm:text-sm transition cursor-pointer shrink-0 flex items-center space-x-1.5"
+      >
+        <svg class="w-4 h-4 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+        <span>Gestionar Trámites ({{ tiposTramite.length }})</span>
+      </button>
+
+      <button
         @click="activeTab = 'usuarios'"
         :class="activeTab === 'usuarios' ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 font-extrabold' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'"
         class="pb-2.5 px-3.5 text-xs sm:text-sm transition cursor-pointer shrink-0 flex items-center space-x-1.5"
@@ -140,7 +149,88 @@
       </div>
     </div>
 
-    <!-- PESTAÑA 2: GESTIÓN DE USUARIOS (Administrar y Editar Usuarios, Excluyendo su propia cuenta) -->
+    <!-- PESTAÑA 2: GESTIONAR TRÁMITES (Crear, Editar, Activar y Desactivar) -->
+    <div v-if="activeTab === 'tipos_tramites'" class="space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+            <svg class="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+            <span>Gestionar Trámites</span>
+          </h2>
+          <p class="text-xs text-slate-500">Configura aranceles, plazos SLA y disponibilidad de trámites universitarios.</p>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button
+            @click="abrirModalTipoTramite(null)"
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-full shadow-sm cursor-pointer transition flex items-center space-x-1.5"
+          >
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span>Nuevo Trámite</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="m3-card border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50 dark:bg-slate-800/80 text-slate-400 uppercase font-semibold">
+              <tr>
+                <th class="p-3.5">Código</th>
+                <th class="p-3.5">Nombre del Trámite</th>
+                <th class="p-3.5">Arancel Oficial</th>
+                <th class="p-3.5">Plazo SLA</th>
+                <th class="p-3.5">Expedientes Registrados</th>
+                <th class="p-3.5">Estado</th>
+                <th class="p-3.5 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+              <tr v-for="t in tiposTramite" :key="t.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition">
+                <td class="p-3.5 font-mono font-bold text-blue-600 dark:text-blue-400">{{ t.codigo }}</td>
+                <td class="p-3.5 font-bold text-slate-800 dark:text-slate-200">
+                  {{ t.nombre }}
+                  <span v-if="t.descripcion" class="block text-[11px] text-slate-400 font-normal line-clamp-1">{{ t.descripcion }}</span>
+                </td>
+                <td class="p-3.5 font-black text-emerald-600 dark:text-emerald-400 text-sm">Bs. {{ t.costo_bs }}</td>
+                <td class="p-3.5 font-mono text-slate-500">{{ t.tiempo_sla_horas }} Horas</td>
+                <td class="p-3.5">
+                  <span class="px-2.5 py-0.5 rounded-full font-bold text-[10px]" :class="contarPorTipo(t.id) > 0 ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'">
+                    {{ contarPorTipo(t.id) }} trámite(s)
+                  </span>
+                </td>
+                <td class="p-3.5">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" :class="t.estado === 'ACTIVO' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'">
+                    {{ t.estado }}
+                  </span>
+                </td>
+                <td class="p-3.5 text-center">
+                  <div class="flex items-center justify-center space-x-1.5">
+                    <button
+                      @click="abrirModalTipoTramite(t)"
+                      class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-lg text-xs cursor-pointer transition shadow-2xs"
+                    >
+                      Editar
+                    </button>
+                    
+                    <!-- Botón Desactivar / Reactivar -->
+                    <button
+                      @click="alternarEstadoTipo(t)"
+                      :class="t.estado === 'ACTIVO' ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200 dark:border-amber-800' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'"
+                      class="px-2.5 py-1 rounded-lg text-xs font-bold cursor-pointer transition border"
+                      :title="t.estado === 'ACTIVO' ? 'Desactivar trámite' : 'Reactivar trámite'"
+                    >
+                      {{ t.estado === 'ACTIVO' ? 'Desactivar' : 'Reactivar' }}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PESTAÑA 3: GESTIÓN DE USUARIOS (Administrar y Editar Usuarios, Excluyendo su propia cuenta) -->
     <div v-if="activeTab === 'usuarios'" class="space-y-4">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -474,6 +564,83 @@
       </div>
     </div>
 
+    <!-- MODAL CREAR / EDITAR TIPO DE TRÁMITE -->
+    <div v-if="modalTipoTramite" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+      <div class="m3-card p-6 sm:p-8 max-w-md w-full space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">
+          {{ editandoTipoId ? 'Editar Tipo de Trámite' : 'Crear Nuevo Tipo de Trámite' }}
+        </h3>
+        <p class="text-xs text-slate-500">Configuración arancelaria oficial y SLA según normativa universitaria.</p>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Código del Trámite</label>
+          <input
+            v-model="formTipo.codigo"
+            :disabled="!!editandoTipoId"
+            type="text"
+            class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono uppercase font-bold disabled:opacity-60"
+            placeholder="EJ: DIPLOMA_ACAD"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Nombre Oficial del Trámite</label>
+          <input
+            v-model="formTipo.nombre"
+            type="text"
+            class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs"
+            placeholder="Ej: Diploma Académico de Grado"
+          />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Descripción / Finalidad</label>
+          <textarea
+            v-model="formTipo.descripcion"
+            rows="2"
+            class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs"
+            placeholder="Breve explicación del trámite..."
+          ></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Arancel Oficial (Bs.)</label>
+            <input
+              v-model="formTipo.costo_bs"
+              type="number"
+              step="0.50"
+              class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold text-emerald-600"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Plazo SLA (Horas)</label>
+            <input
+              v-model="formTipo.tiempo_sla_horas"
+              type="number"
+              class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono"
+            />
+          </div>
+        </div>
+
+        <div v-if="editandoTipoId">
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Estado</label>
+          <select v-model="formTipo.estado" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-bold">
+            <option value="ACTIVO">ACTIVO</option>
+            <option value="INACTIVO">INACTIVO</option>
+          </select>
+        </div>
+
+        <div class="flex justify-end space-x-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+          <button @click="modalTipoTramite = false" :disabled="guardandoTipo" class="px-4 py-2 text-xs font-semibold text-slate-500 cursor-pointer disabled:opacity-50">Cancelar</button>
+          <button @click="guardarTipoTramite" :disabled="guardandoTipo || !formTipo.nombre" class="px-5 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-full shadow cursor-pointer flex items-center space-x-1">
+            <span v-if="guardandoTipo">Guardando...</span>
+            <span v-else>{{ editandoTipoId ? 'Guardar Cambios' : 'Crear Tipo de Trámite' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -675,6 +842,81 @@ async function guardarEdicionUsuario() {
   } catch (e) {
     errorEdicion.value = e.response?.data?.message || 'Error al guardar los cambios del usuario.';
     actions.toast(errorEdicion.value, 'error', 'Error al Actualizar');
+  }
+}
+
+// Gestión de Tipos de Trámites y Aranceles
+const modalTipoTramite = ref(false);
+const editandoTipoId = ref(null);
+const guardandoTipo = ref(false);
+const formTipo = ref({
+  codigo: '',
+  nombre: '',
+  descripcion: '',
+  costo_bs: 50,
+  tiempo_sla_horas: 72,
+  estado: 'ACTIVO',
+});
+
+function abrirModalTipoTramite(tipo) {
+  if (tipo) {
+    editandoTipoId.value = tipo.id;
+    formTipo.value = {
+      codigo: tipo.codigo,
+      nombre: tipo.nombre,
+      descripcion: tipo.descripcion || '',
+      costo_bs: tipo.costo_bs,
+      tiempo_sla_horas: tipo.tiempo_sla_horas,
+      estado: tipo.estado || 'ACTIVO',
+    };
+  } else {
+    editandoTipoId.value = null;
+    formTipo.value = {
+      codigo: '',
+      nombre: '',
+      descripcion: '',
+      costo_bs: 50,
+      tiempo_sla_horas: 72,
+      estado: 'ACTIVO',
+    };
+  }
+  modalTipoTramite.value = true;
+}
+
+async function guardarTipoTramite() {
+  if (guardandoTipo.value) return;
+  guardandoTipo.value = true;
+  try {
+    if (editandoTipoId.value) {
+      await axios.put(`/api/tramites/tipos/${editandoTipoId.value}`, formTipo.value);
+      actions.toast(`Tipo de trámite "${formTipo.value.nombre}" actualizado con éxito.`, 'success', 'Catálogo Actualizado');
+    } else {
+      await axios.post('/api/tramites/tipos', formTipo.value);
+      actions.toast(`Tipo de trámite "${formTipo.value.nombre}" creado exitosamente.`, 'success', 'Nuevo Trámite Registrado');
+    }
+    modalTipoTramite.value = false;
+    await loadData();
+  } catch (e) {
+    actions.toast(e.response?.data?.message || 'Error al guardar tipo de trámite.', 'error', 'Error');
+  } finally {
+    guardandoTipo.value = false;
+  }
+}
+
+async function alternarEstadoTipo(tipo) {
+  const nuevoEstado = tipo.estado === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO';
+  const accion = nuevoEstado === 'INACTIVO' ? 'desactivar (Borrado Lógico)' : 'reactivar';
+  
+  if (!confirm(`¿Desea ${accion} el trámite "${tipo.nombre}"?`)) {
+    return;
+  }
+
+  try {
+    const res = await axios.delete(`/api/tramites/tipos/${tipo.id}`);
+    actions.toast(res.data.message || `Trámite ${tipo.nombre} actualizado.`, 'success', 'Soft Delete / Estado');
+    await loadData();
+  } catch (e) {
+    actions.toast(e.response?.data?.message || 'Error al cambiar estado del trámite.', 'error', 'Error');
   }
 }
 

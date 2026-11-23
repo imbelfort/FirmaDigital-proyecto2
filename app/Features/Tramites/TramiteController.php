@@ -57,11 +57,20 @@ class TramiteController
         ]);
     }
 
-    public function tiposTramite()
+    public function tiposTramite(Request $request)
     {
+        $query = TipoTramite::with(['requisitos', 'guiasProcesales']);
+
+        // Para alumnos/público general, solo mostrar los que están ACTIVO (los INACTIVO están borrados lógicamente)
+        // El administrador puede consultar todos mediante el parámetro ?todos=1 o por su rol
+        $esAdmin = session('usuario') && session('usuario')->rol === 'ADMINISTRATIVO';
+        if (!$esAdmin && !$request->boolean('todos')) {
+            $query->where('estado', 'ACTIVO');
+        }
+
         return response()->json([
             'success' => true,
-            'data' => TipoTramite::with(['requisitos', 'guiasProcesales'])->get(),
+            'data' => $query->get(),
         ]);
     }
 
@@ -95,6 +104,13 @@ class TramiteController
     {
         $tipo = TipoTramite::findOrFail($id);
 
+        $request->validate([
+            'nombre' => 'sometimes|required|string|max:150',
+            'descripcion' => 'nullable|string',
+            'tiempo_sla_horas' => 'sometimes|required|integer|min:1',
+            'costo_bs' => 'sometimes|required|numeric|min:0',
+        ]);
+
         $tipo->update([
             'nombre' => $request->nombre ?? $tipo->nombre,
             'descripcion' => $request->descripcion ?? $tipo->descripcion,
@@ -106,6 +122,24 @@ class TramiteController
         return response()->json([
             'success' => true,
             'message' => 'Tipo de trámite actualizado correctamente.',
+            'data' => $tipo,
+        ]);
+    }
+
+    public function destroyTipoTramite($id)
+    {
+        $tipo = TipoTramite::findOrFail($id);
+
+        // Si ya está inactivo, reactivarlo; si está activo, hacer borrado lógico pasando a INACTIVO
+        $nuevoEstado = $tipo->estado === 'ACTIVO' ? 'INACTIVO' : 'ACTIVO';
+        $tipo->estado = $nuevoEstado;
+        $tipo->save();
+
+        $accion = $nuevoEstado === 'INACTIVO' ? 'desactivado (Borrado Lógico)' : 'reactivado';
+
+        return response()->json([
+            'success' => true,
+            'message' => "Tipo de trámite '{$tipo->nombre}' {$accion} exitosamente.",
             'data' => $tipo,
         ]);
     }

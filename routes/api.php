@@ -44,6 +44,7 @@ Route::prefix('tramites')->group(function () {
     Route::get('/tipos', [TramiteController::class, 'tiposTramite']);
     Route::post('/tipos', [TramiteController::class, 'storeTipoTramite'])->middleware('rbac:ADMINISTRATIVO');
     Route::put('/tipos/{id}', [TramiteController::class, 'updateTipoTramite'])->middleware('rbac:ADMINISTRATIVO');
+    Route::delete('/tipos/{id}', [TramiteController::class, 'destroyTipoTramite'])->middleware('rbac:ADMINISTRATIVO');
     Route::post('/', [TramiteController::class, 'store'])->middleware('rbac:ALUMNO,DOCENTE,ADMINISTRATIVO');
     Route::post('/{id}/flujo', [TramiteController::class, 'avanzarFlujo'])->middleware('rbac:ENCARGADO,ADMINISTRATIVO');
     Route::post('/{id}/observaciones', [TramiteController::class, 'agregarObservacion'])->middleware('rbac:ENCARGADO,ADMINISTRATIVO');
