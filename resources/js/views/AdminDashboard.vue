@@ -147,6 +147,80 @@
           </table>
         </div>
       </div>
+
+      <!-- Widget de Monitoreo y Cumplimiento de Plazos SLA -->
+      <div class="m3-card p-6 border border-slate-200 dark:border-slate-800 space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+              <svg class="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>Monitoreo de Plazos Reglamentarios (SLA)</span>
+            </h3>
+            <p class="text-xs text-slate-500">Supervisión en tiempo real del cumplimiento de horas límite por trámite.</p>
+          </div>
+          <span class="text-xs font-mono font-bold px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full">
+            Total Monitoreados: {{ slaStats.total }}
+          </span>
+        </div>
+
+        <!-- KPIs de Monitoreo SLA -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40">
+            <span class="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 block">En Tiempo Normal</span>
+            <p class="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{{ slaStats.enTiempo }}</p>
+            <span class="text-[10px] text-emerald-600 font-semibold">Dentro del plazo</span>
+          </div>
+          <div class="p-4 rounded-2xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40">
+            <span class="text-[11px] font-bold text-amber-700 dark:text-amber-300 block">Por Vencer (&lt;24h)</span>
+            <p class="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">{{ slaStats.porVencer }}</p>
+            <span class="text-[10px] text-amber-600 font-semibold">Alerta preventiva</span>
+          </div>
+          <div class="p-4 rounded-2xl bg-red-50/70 dark:bg-red-950/20 border border-red-200 dark:border-red-800/40">
+            <span class="text-[11px] font-bold text-red-700 dark:text-red-300 block">SLA Vencidos</span>
+            <p class="text-2xl font-black text-red-600 dark:text-red-400 mt-1">{{ slaStats.vencidos }}</p>
+            <span class="text-[10px] text-red-600 font-semibold">Fuera de tiempo límite</span>
+          </div>
+          <div class="p-4 rounded-2xl bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/40">
+            <span class="text-[11px] font-bold text-blue-700 dark:text-blue-300 block">Concluidos</span>
+            <p class="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">{{ slaStats.cumplidos }}</p>
+            <span class="text-[10px] text-blue-600 font-semibold">Despachados</span>
+          </div>
+        </div>
+
+        <!-- Tabla resumen de trámites con alerta activa -->
+        <div v-if="slaTramitesCriticos.length > 0" class="overflow-x-auto pt-2 border-t border-slate-100 dark:border-slate-800">
+          <p class="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">Trámites en Atención Prioritaria (Por Vencer o Vencidos):</p>
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50 dark:bg-slate-800/80 text-slate-500 uppercase font-bold">
+              <tr>
+                <th class="p-2.5">Código</th>
+                <th class="p-2.5">Trámite</th>
+                <th class="p-2.5">Solicitante</th>
+                <th class="p-2.5">Estado SLA</th>
+                <th class="p-2.5">Horas Transcurridas</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+              <tr v-for="t in slaTramitesCriticos" :key="t.id">
+                <td class="p-2.5 font-mono font-bold text-blue-600">{{ t.codigo_tramite }}</td>
+                <td class="p-2.5 font-semibold text-slate-800 dark:text-slate-200">{{ t.asunto }}</td>
+                <td class="p-2.5 text-slate-600 dark:text-slate-300">{{ t.solicitante ? t.solicitante.nombre + ' ' + t.solicitante.apellidos : 'N/A' }}</td>
+                <td class="p-2.5">
+                  <span
+                    class="px-2 py-0.5 rounded-full text-[10px] font-bold"
+                    :class="t.monitoreo_sla?.estado_sla === 'VENCIDO' ? 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'"
+                  >
+                    {{ t.monitoreo_sla?.estado_sla === 'VENCIDO' ? 'VENCIDO' : 'POR VENCER' }}
+                  </span>
+                </td>
+                <td class="p-2.5 font-mono text-slate-500">
+                  {{ t.monitoreo_sla?.horas_transcurridas }}h / {{ t.monitoreo_sla?.horas_sla_limite }}h
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- PESTAÑA 2: GESTIONAR TRÁMITES (Crear, Editar, Activar y Desactivar) -->
@@ -716,6 +790,39 @@ const totalRecaudadoBs = computed(() => {
     const m = t.pago?.monto ? Number(t.pago.monto) : (t.tipo_tramite ? Number(t.tipo_tramite.costo_bs) : 0);
     return acc + m;
   }, 0);
+});
+
+// Estadísticas y Monitoreo SLA
+const slaStats = computed(() => {
+  let enTiempo = 0;
+  let porVencer = 0;
+  let vencidos = 0;
+  let cumplidos = 0;
+  let total = 0;
+
+  tramites.value.forEach(t => {
+    if (t.monitoreo_sla) {
+      total++;
+      const est = t.monitoreo_sla.estado_sla;
+      if (['CUMPLIDO_EN_TIEMPO', 'CUMPLIDO_FUERA_DE_TIEMPO'].includes(est)) {
+        cumplidos++;
+      } else if (est === 'VENCIDO') {
+        vencidos++;
+      } else if (est === 'POR_VENCER') {
+        porVencer++;
+      } else {
+        enTiempo++;
+      }
+    }
+  });
+
+  return { total, enTiempo, porVencer, vencidos, cumplidos };
+});
+
+const slaTramitesCriticos = computed(() => {
+  return tramites.value.filter(t => {
+    return t.monitoreo_sla && ['POR_VENCER', 'VENCIDO'].includes(t.monitoreo_sla.estado_sla);
+  }).slice(0, 5); // Mostrar los primeros 5 más críticos
 });
 
 function contarPorTipo(idTipo) {

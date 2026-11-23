@@ -27,7 +27,7 @@ class TramiteController
             'despacho',
             'certificado',
             'portalSeguimiento',
-            'monitoreoSla'
+            'monitoreoSla.alertas'
         ])->orderBy('id', 'desc');
 
         if ($request->filled('estado')) {

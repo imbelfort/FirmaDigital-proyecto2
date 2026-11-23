@@ -108,7 +108,7 @@
               >
                 <div class="flex items-center space-x-2.5">
                   <span class="w-4 h-4 rounded-full bg-orange-500 shadow-xs"></span>
-                  <span class="text-slate-700 dark:text-slate-200">🎈 Niños (Lúdico / Cálido)</span>
+                  <span class="text-slate-700 dark:text-slate-200">Niños (Lúdico / Cálido)</span>
                 </div>
                 <span v-if="state.theme === 'ninos'" class="text-orange-600 font-bold text-xs">✓</span>
               </button>
@@ -121,7 +121,7 @@
               >
                 <div class="flex items-center space-x-2.5">
                   <span class="w-4 h-4 rounded-full bg-sky-500 shadow-xs"></span>
-                  <span class="text-slate-700 dark:text-slate-200">⚡ Jóvenes (Cian Tecnológico)</span>
+                  <span class="text-slate-700 dark:text-slate-200">Jóvenes (Cian Tecnológico)</span>
                 </div>
                 <span v-if="state.theme === 'jovenes'" class="text-sky-600 font-bold text-xs">✓</span>
               </button>
@@ -134,7 +134,7 @@
               >
                 <div class="flex items-center space-x-2.5">
                   <span class="w-4 h-4 rounded-full bg-slate-700 shadow-xs"></span>
-                  <span class="text-slate-700 dark:text-slate-200">🏛️ Adultos (Formal / Sobrio)</span>
+                  <span class="text-slate-700 dark:text-slate-200">Adultos (Formal / Sobrio)</span>
                 </div>
                 <span v-if="state.theme === 'adultos'" class="text-slate-800 dark:text-slate-200 font-bold text-xs">✓</span>
               </button>

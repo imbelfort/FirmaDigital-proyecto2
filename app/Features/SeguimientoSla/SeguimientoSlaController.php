@@ -17,16 +17,55 @@ class SeguimientoSlaController
             ->orderBy('id', 'desc')
             ->get();
 
-        // Recalcular horas transcurridas en tiempo real
+        // Recalcular horas transcurridas y registrar alertas automáticas
         foreach ($monitoreos as $m) {
             if (!in_array($m->estado_sla, ['CUMPLIDO_EN_TIEMPO', 'CUMPLIDO_FUERA_DE_TIEMPO'])) {
                 $inicio = \Carbon\Carbon::parse($m->fecha_inicio_sla);
-                $horas = $inicio->diffInHours(now());
+                $horas = round($inicio->diffInHours(now()), 1);
                 $m->horas_transcurridas = $horas;
+
+                $horasRestantes = $m->horas_sla_limite - $horas;
+
                 if ($horas > $m->horas_sla_limite) {
                     $m->estado_sla = 'VENCIDO';
-                } elseif (($m->horas_sla_limite - $horas) <= 24) {
+
+                    // Registrar alerta de vencimiento si no existe aún
+                    $yaTieneVencido = AlertaSla::where('id_monitoreo', $m->id)
+                        ->where('tipo_alerta', 'VENCIMIENTO_SLA')
+                        ->exists();
+
+                    if (!$yaTieneVencido) {
+                        AlertaSla::create([
+                            'id_monitoreo' => $m->id,
+                            'id_tramite' => $m->id_tramite,
+                            'tipo_alerta' => 'VENCIMIENTO_SLA',
+                            'mensaje' => "El trámite {$m->tramite?->codigo_tramite} ha sobrepasado el plazo límite de {$m->horas_sla_limite}h. Horas transcurridas: {$horas}h.",
+                            'fecha_alerta' => now(),
+                            'notificado_a' => 'encargado@uagrm.edu.bo,vicerrector@uagrm.edu.bo',
+                        ]);
+                        $m->alertas_emitidas += 1;
+                        $m->ultima_alerta = now();
+                    }
+                } elseif ($horasRestantes <= 24) {
                     $m->estado_sla = 'POR_VENCER';
+
+                    // Registrar advertencia 24h si no existe
+                    $yaTiene24h = AlertaSla::where('id_monitoreo', $m->id)
+                        ->where('tipo_alerta', 'ADVERTENCIA_24H')
+                        ->exists();
+
+                    if (!$yaTiene24h) {
+                        AlertaSla::create([
+                            'id_monitoreo' => $m->id,
+                            'id_tramite' => $m->id_tramite,
+                            'tipo_alerta' => 'ADVERTENCIA_24H',
+                            'mensaje' => "El trámite {$m->tramite?->codigo_tramite} está próximo a vencer. Quedan {$horasRestantes}h de las {$m->horas_sla_limite}h reglamentarias.",
+                            'fecha_alerta' => now(),
+                            'notificado_a' => 'encargado@uagrm.edu.bo',
+                        ]);
+                        $m->alertas_emitidas += 1;
+                        $m->ultima_alerta = now();
+                    }
                 } else {
                     $m->estado_sla = 'EN_TIEMPO';
                 }

@@ -90,6 +90,34 @@
 
           <h3 class="font-bold text-slate-900 dark:text-white text-sm">{{ t.asunto }}</h3>
 
+          <!-- Semáforo SLA de Control de Tiempos para el Encargado -->
+          <div v-if="t.monitoreo_sla" class="p-3 rounded-2xl border text-xs space-y-1.5" :class="getSlaContainerClass(t.monitoreo_sla)">
+            <div class="flex items-center justify-between">
+              <span class="font-bold flex items-center space-x-1.5" :class="getSlaTextClass(t.monitoreo_sla)">
+                <span class="w-2.5 h-2.5 rounded-full" :class="getSlaDotClass(t.monitoreo_sla)"></span>
+                <span>{{ getSlaBadgeLabel(t.monitoreo_sla) }}</span>
+              </span>
+              <span class="font-mono text-[11px] text-slate-500 font-semibold">
+                {{ formatSlaTiempoRestante(t.monitoreo_sla) }}
+              </span>
+            </div>
+            <!-- Barra de progreso SLA -->
+            <div class="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+              <div
+                class="h-full rounded-full transition-all duration-500"
+                :class="getSlaBarClass(t.monitoreo_sla)"
+                :style="{ width: getSlaPorcentaje(t.monitoreo_sla) + '%' }"
+              ></div>
+            </div>
+            <div class="flex justify-between text-[10px] text-slate-400 font-mono">
+              <span>Límite: {{ t.monitoreo_sla.horas_sla_limite }}h reglamentarias</span>
+              <span v-if="t.monitoreo_sla.alertas && t.monitoreo_sla.alertas.length > 0" class="text-red-500 font-bold flex items-center space-x-1">
+                <svg class="w-3 h-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <span>{{ t.monitoreo_sla.alertas.length }} alerta(s) emitida(s)</span>
+              </span>
+            </div>
+          </div>
+
           <!-- Cotejo de Recaudos -->
           <div class="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
             <span class="text-xs font-bold text-slate-700 dark:text-slate-300 block">Recaudos presentados ({{ t.documentos ? t.documentos.length : 0 }}):</span>
@@ -103,8 +131,9 @@
               </div>
 
               <!-- Si el recaudo está observado, mostrar la nota explicativa -->
-              <div v-if="d.estado_validacion === 'OBSERVADO'" class="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300">
-                ⚠️ <span class="font-bold">Observación:</span> {{ d.observacion_validacion || 'Documento requiere corrección por parte del estudiante.' }}
+              <div v-if="d.estado_validacion === 'OBSERVADO'" class="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300 flex items-start space-x-1.5">
+                <svg class="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <div><span class="font-bold">Observación:</span> {{ d.observacion_validacion || 'Documento requiere corrección por parte del estudiante.' }}</div>
               </div>
 
               <!-- Acciones de validación para el Encargado (Solo si el trámite NO ha concluido ni está en firma) -->
@@ -154,7 +183,10 @@
             
             <!-- Trámite ya en etapas finales o de firma (Informativo) -->
             <div v-if="t.estado === 'FIRMADO' || t.estado === 'DESPACHADO'" class="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 font-semibold flex items-center space-x-1.5">
-              <span>✓ Trámite finalizado procesalmente ({{ formatEstadoLegible(t.estado) }}).</span>
+              <span class="flex items-center space-x-1.5">
+                <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>Trámite finalizado procesalmente ({{ formatEstadoLegible(t.estado) }}).</span>
+              </span>
             </div>
 
             <div v-else-if="t.estado === 'EN_FIRMA'" class="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 text-xs text-purple-800 dark:text-purple-300 font-semibold flex items-center justify-between">
@@ -182,9 +214,10 @@
               </button>
               <div
                 v-else-if="t.estado !== 'INICIADO' && t.estado !== 'OBSERVADO'"
-                class="py-2 px-2.5 bg-slate-50 dark:bg-slate-800/50 text-slate-400 dark:text-slate-500 rounded-xl text-left font-semibold border border-dashed border-slate-200 dark:border-slate-700"
+                class="py-2 px-2.5 bg-slate-50 dark:bg-slate-800/50 text-slate-400 dark:text-slate-500 rounded-xl text-left font-semibold border border-dashed border-slate-200 dark:border-slate-700 flex items-center space-x-1"
               >
-                ✓ Requisitos ya validados
+                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>Requisitos ya validados</span>
               </div>
 
               <!-- Paso 2: Compilar Legajo (Habilitado si los requisitos están validados) -->
@@ -199,9 +232,10 @@
               </button>
               <div
                 v-else-if="t.estado === 'EXPEDIENTE_COMPILADO'"
-                class="py-2 px-2.5 bg-slate-50 dark:bg-slate-800/50 text-slate-400 dark:text-slate-500 rounded-xl text-left font-semibold border border-dashed border-slate-200 dark:border-slate-700"
+                class="py-2 px-2.5 bg-slate-50 dark:bg-slate-800/50 text-slate-400 dark:text-slate-500 rounded-xl text-left font-semibold border border-dashed border-slate-200 dark:border-slate-700 flex items-center space-x-1"
               >
-                ✓ Expediente ya compilado
+                <svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>Expediente ya compilado</span>
               </div>
 
               <!-- Paso 3: Pasar a Firma Vicerrectoral (Habilitado cuando el expediente está compilado) -->
@@ -212,7 +246,7 @@
                 class="py-2 px-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition cursor-pointer shadow-sm disabled:opacity-50 text-left flex items-center justify-between"
               >
                 <span>3. Pasar a Firma VR</span>
-                <span class="text-[10px] font-mono">✍️</span>
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
               </button>
 
               <!-- Botón Observar Trámite: siempre disponible mientras no esté cerrado -->
@@ -354,7 +388,8 @@
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center space-x-2">
-            <span>🛡️ Bitácora de Auditoría del Sistema</span>
+            <svg class="w-4 h-4 text-slate-600 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            <span>Bitácora de Auditoría del Sistema</span>
             <span class="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 font-bold">Confidencial</span>
           </h2>
           <p class="text-xs text-slate-500">Registro inmutable de inicios de sesión, accesos fallidos, tráfico y bloqueos de seguridad.</p>
@@ -710,6 +745,78 @@ import axios from 'axios';
 import SkeletonLoader from '../components/SkeletonLoader.vue';
 
 const activeTab = ref('todos_tramites');
+// Helpers visuales para el Semáforo SLA
+function getSlaBadgeLabel(sla) {
+  if (!sla) return 'Sin SLA';
+  if (['CUMPLIDO_EN_TIEMPO', 'CUMPLIDO_FUERA_DE_TIEMPO'].includes(sla.estado_sla)) {
+    return 'Cumplido / Concluido';
+  }
+  if (sla.estado_sla === 'VENCIDO') return 'SLA Vencido';
+  if (sla.estado_sla === 'POR_VENCER') return 'Por Vencer (<24h)';
+  return 'En Tiempo';
+}
+
+function getSlaContainerClass(sla) {
+  if (!sla) return 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700';
+  if (['CUMPLIDO_EN_TIEMPO', 'CUMPLIDO_FUERA_DE_TIEMPO'].includes(sla.estado_sla)) {
+    return 'bg-blue-50/60 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/40';
+  }
+  if (sla.estado_sla === 'VENCIDO') {
+    return 'bg-red-50/60 dark:bg-red-950/30 border-red-200 dark:border-red-900/50';
+  }
+  if (sla.estado_sla === 'POR_VENCER') {
+    return 'bg-amber-50/60 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/50';
+  }
+  return 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900/40';
+}
+
+function getSlaTextClass(sla) {
+  if (!sla) return 'text-slate-500';
+  if (['CUMPLIDO_EN_TIEMPO', 'CUMPLIDO_FUERA_DE_TIEMPO'].includes(sla.estado_sla)) return 'text-blue-600 dark:text-blue-400';
+  if (sla.estado_sla === 'VENCIDO') return 'text-red-600 dark:text-red-400';
+  if (sla.estado_sla === 'POR_VENCER') return 'text-amber-600 dark:text-amber-400';
+  return 'text-emerald-600 dark:text-emerald-400';
+}
+
+function getSlaDotClass(sla) {
+  if (!sla) return 'bg-slate-400';
+  if (['CUMPLIDO_EN_TIEMPO', 'CUMPLIDO_FUERA_DE_TIEMPO'].includes(sla.estado_sla)) return 'bg-blue-500';
+  if (sla.estado_sla === 'VENCIDO') return 'bg-red-500 animate-pulse';
+  if (sla.estado_sla === 'POR_VENCER') return 'bg-amber-500 animate-bounce';
+  return 'bg-emerald-500';
+}
+
+function getSlaBarClass(sla) {
+  if (!sla) return 'bg-slate-400';
+  if (['CUMPLIDO_EN_TIEMPO', 'CUMPLIDO_FUERA_DE_TIEMPO'].includes(sla.estado_sla)) return 'bg-blue-500';
+  if (sla.estado_sla === 'VENCIDO') return 'bg-red-500';
+  if (sla.estado_sla === 'POR_VENCER') return 'bg-amber-500';
+  return 'bg-emerald-500';
+}
+
+function getSlaPorcentaje(sla) {
+  if (!sla || !sla.horas_sla_limite) return 0;
+  if (['CUMPLIDO_EN_TIEMPO', 'CUMPLIDO_FUERA_DE_TIEMPO'].includes(sla.estado_sla)) return 100;
+  const transcurridas = parseFloat(sla.horas_transcurridas) || 0;
+  const limite = parseFloat(sla.horas_sla_limite) || 72;
+  const pct = Math.min(Math.round((transcurridas / limite) * 100), 100);
+  return pct;
+}
+
+function formatSlaTiempoRestante(sla) {
+  if (!sla) return '';
+  if (['CUMPLIDO_EN_TIEMPO', 'CUMPLIDO_FUERA_DE_TIEMPO'].includes(sla.estado_sla)) {
+    return 'Trámite Concluido';
+  }
+  const transcurridas = parseFloat(sla.horas_transcurridas) || 0;
+  const limite = parseFloat(sla.horas_sla_limite) || 72;
+  const restantes = Math.round(limite - transcurridas);
+  if (restantes <= 0) {
+    return `Excedido por ${Math.abs(restantes)}h`;
+  }
+  return `Quedan ${restantes}h (${transcurridas}h usadas)`;
+}
+
 const loading = ref(false);
 const tramites = ref([]);
 const tiposTramite = ref([]);
