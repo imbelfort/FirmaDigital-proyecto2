@@ -34,6 +34,24 @@ class PagoController
             ], 400);
         }
 
+        // Si ya existe un QR generado para este trámite:
+        // 1. Si el QR sigue vigente (no ha vencido), lo REUTILIZAMOS para evitar llamadas innecesarias y no saturar la pasarela.
+        // 2. Si ya expiró, entonces llamamos nuevamente a PagoFácil para generar un nuevo QR renovado.
+        if ($tramite->pago && !empty($tramite->pago->qr_base64)) {
+            $fechaExp = $tramite->pago->fecha_expiracion ? \Carbon\Carbon::parse($tramite->pago->fecha_expiracion) : null;
+            $sigueVigente = $fechaExp && $fechaExp->isFuture();
+
+            if ($sigueVigente && !$request->boolean('forzar_nuevo')) {
+                return response()->json([
+                    'success' => true,
+                    'reutilizado' => true,
+                    'message' => 'QR vigente recuperado. Puedes pagar con este código hasta ' . $fechaExp->format('d/m/Y H:i'),
+                    'pago' => $tramite->pago,
+                    'qr_image_url' => null,
+                ]);
+            }
+        }
+
         // El costo oficial proviene estrictamente de tipo_tramite.costo_bs de BD.md
         $monto = (float)($tramite->tipoTramite->costo_bs ?? 50.00);
 

@@ -642,11 +642,21 @@
         <div v-if="!pagoError" class="text-xs text-slate-500 space-y-1">
           <p class="font-mono font-bold text-slate-700 dark:text-slate-300">Ref: {{ pagoData.payment_number }}</p>
           <p class="text-[11px]">Escanee el código QR desde su aplicación bancaria o guárdelo para pagar después.</p>
-          <!-- Aviso de Vigencia del QR -->
-          <p class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold flex items-center justify-center space-x-1">
-            <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <span>Válido por 24 horas. Si vence, el sistema te generará uno nuevo automáticamente.</span>
-          </p>
+          <!-- Aviso de Vigencia del QR y Botón para Renovar si expira -->
+          <div class="space-y-1">
+            <p class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold flex items-center justify-center space-x-1">
+              <svg class="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>{{ pagoData.fecha_expiracion ? 'Válido hasta: ' + formatFecha(pagoData.fecha_expiracion) : 'QR con validez de sesión' }}</span>
+            </p>
+            <button
+              v-if="!loadingPago"
+              @click="solicitarNuevoQr(tramiteAPagar)"
+              class="text-[11px] text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer inline-flex items-center space-x-1"
+            >
+              <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <span>¿El QR expiró o falló? Solicitar un nuevo código QR</span>
+            </button>
+          </div>
         </div>
 
         <div class="space-y-2 pt-2">
@@ -955,7 +965,7 @@ function descargarQrPago() {
   actions.toast('Código QR descargado. Puedes compartirlo o pagarlo desde tu galería bancaria.', 'success', 'QR Guardado');
 }
 
-async function abrirModalPago(t) {
+async function abrirModalPago(t, forzarNuevo = false) {
   if (loadingPago.value) return;
   loadingPago.value = true;
   tramiteAPagar.value = t;
@@ -965,13 +975,18 @@ async function abrirModalPago(t) {
 
   try {
     // Configuración de timeout explícito para la petición del QR (15 segundos)
-    const res = await axios.post(`/api/pagos/tramite/${t.id}/generar-qr`, {}, {
+    const res = await axios.post(`/api/pagos/tramite/${t.id}/generar-qr`, {
+      forzar_nuevo: forzarNuevo
+    }, {
       timeout: 15000
     });
     pagoData.value = {
       ...res.data.pago,
       qr_image_url: res.data.qr_image_url,
     };
+    if (res.data.reutilizado) {
+      actions.toast('Se recuperó el código QR vigente de tu trámite.', 'info', 'QR Activo');
+    }
   } catch (e) {
     if (e.code === 'ECONNABORTED' || e.message?.includes('timeout')) {
       pagoError.value = 'Tiempo de espera agotado al conectar con PagoFácil. La pasarela tardó en responder. Por favor intente nuevamente en unos instantes.';
@@ -981,6 +996,10 @@ async function abrirModalPago(t) {
   } finally {
     loadingPago.value = false;
   }
+}
+
+function solicitarNuevoQr(t) {
+  abrirModalPago(t, true);
 }
 
 async function verificarPagoConPagoFacil() {
