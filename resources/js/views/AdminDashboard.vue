@@ -736,7 +736,7 @@
 
     <!-- MODAL CREAR / EDITAR TIPO DE TRÁMITE -->
     <div v-if="modalTipoTramite" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div class="m3-card p-6 sm:p-8 max-w-md w-full space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl">
+      <div class="m3-card p-6 sm:p-8 max-w-lg max-h-[90vh] overflow-y-auto w-full space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl">
         <h3 class="text-lg font-bold text-slate-900 dark:text-white">
           {{ editandoTipoId ? 'Editar Tipo de Trámite' : 'Crear Nuevo Tipo de Trámite' }}
         </h3>
@@ -800,6 +800,17 @@
             <option value="INACTIVO">INACTIVO</option>
           </select>
         </div>
+
+        <fieldset class="space-y-2 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+          <legend class="px-1 text-xs font-bold text-slate-800 dark:text-slate-200">Adjuntos por etapa</legend>
+          <p class="text-xs text-slate-500">Marca cuándo se pueden subir archivos para este tipo de trámite.</p>
+          <label v-for="etapa in etapasAdjuntos" :key="etapa.estado"
+            class="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs dark:bg-slate-800">
+            <span>{{ etapa.nombre }}</span>
+            <input v-model="formTipo.etapas_adjuntos" type="checkbox" :value="etapa.estado">
+          </label>
+          <p class="text-xs text-slate-500">El expediente se cierra para adjuntos al compilarlo y permanece cerrado durante firma y despacho.</p>
+        </fieldset>
 
         <div class="flex justify-end space-x-2 pt-4 border-t border-slate-100 dark:border-slate-800">
           <button @click="modalTipoTramite = false" :disabled="guardandoTipo" class="px-4 py-2 text-xs font-semibold text-slate-500 cursor-pointer disabled:opacity-50">Cancelar</button>
@@ -1113,6 +1124,12 @@ async function guardarEdicionUsuario() {
 const modalTipoTramite = ref(false);
 const editandoTipoId = ref(null);
 const guardandoTipo = ref(false);
+const etapasAdjuntos = [
+  { estado: 'INICIADO', nombre: 'Recepción' },
+  { estado: 'REQUISITOS_VALIDADOS', nombre: 'Después de validar requisitos' },
+  { estado: 'OBSERVADO', nombre: 'Subsanación de observaciones' },
+];
+const adjuntosPredeterminados = ['INICIADO', 'OBSERVADO'];
 const formTipo = ref({
   codigo: '',
   nombre: '',
@@ -1132,6 +1149,7 @@ function abrirModalTipoTramite(tipo) {
       costo_bs: tipo.costo_bs,
       tiempo_sla_horas: tipo.tiempo_sla_horas,
       estado: tipo.estado || 'ACTIVO',
+      etapas_adjuntos: [...(tipo.etapas_adjuntos ?? adjuntosPredeterminados)],
     };
   } else {
     editandoTipoId.value = null;
@@ -1142,6 +1160,7 @@ function abrirModalTipoTramite(tipo) {
       costo_bs: 50,
       tiempo_sla_horas: 72,
       estado: 'ACTIVO',
+      etapas_adjuntos: [...adjuntosPredeterminados],
     };
   }
   modalTipoTramite.value = true;

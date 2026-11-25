@@ -6,6 +6,7 @@ use App\Models\DocumentoExpediente;
 use App\Models\Tramite;
 use App\Models\BitacoraTramite;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -18,15 +19,23 @@ class DocumentoController
             'nombre_documento' => 'required|string|max:200',
         ]);
 
-        $tramite = Tramite::findOrFail($request->id_tramite);
+        return DB::transaction(fn () => $this->guardarAdjunto($request));
+    }
 
-        // Regla de Negocio Procesal:
-        // Solo se permite adjuntar documentos si el trámite está en etapa inicial (INICIADO) o en subsanación (OBSERVADO).
-        // En REQUISITOS_VALIDADOS, EXPEDIENTE_COMPILADO, EN_FIRMA o FIRMADO/DESPACHADO no se admiten alteraciones documentales.
-        if (!in_array($tramite->estado, ['INICIADO', 'OBSERVADO'])) {
+    private function guardarAdjunto(Request $request)
+    {
+        $tramite = Tramite::with('tipoTramite')->lockForUpdate()->findOrFail($request->id_tramite);
+        $usuario = $request->session()->get('usuario');
+        abort_unless(
+            $usuario && (in_array($usuario->rol, ['ENCARGADO', 'ADMINISTRATIVO'], true)
+                || (int) $usuario->id_usuario === (int) $tramite->id_usuario_solicitante),
+            403
+        );
+
+        if (!$tramite->tipoTramite?->permiteAdjuntos($tramite->estado)) {
             return response()->json([
                 'success' => false,
-                'message' => "No se pueden adjuntar documentos. El trámite se encuentra en estado procesal '{$tramite->estado}' y el expediente está cerrado para edición.",
+                'message' => 'El tipo de trámite no admite adjuntos en esta etapa.',
             ], 422);
         }
 

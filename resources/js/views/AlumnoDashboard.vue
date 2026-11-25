@@ -309,7 +309,8 @@
               <svg class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
               <div>
                 <p class="font-bold">El expediente tiene observaciones del Encargado.</p>
-                <p>Por favor adjunta el documento corregido para subsanar el requisito observado.</p>
+                <p v-if="puedeAdjuntar(t)">Adjunta el documento corregido para subsanar el requisito observado.</p>
+                <p v-else>Consulta el seguimiento detallado para ver qué observó el encargado.</p>
               </div>
             </div>
 
@@ -329,7 +330,7 @@
                   </span>
                   <!-- Botón directo de corregir si este documento específico fue observado -->
                   <button
-                    v-if="doc.estado_validacion === 'OBSERVADO'"
+                    v-if="doc.estado_validacion === 'OBSERVADO' && puedeAdjuntar(t)"
                     @click="corregirDocObservado(t, doc)"
                     class="px-2 py-0.5 text-[10px] font-bold bg-amber-600 hover:bg-amber-700 text-white rounded cursor-pointer"
                     title="Subir archivo corregido para este documento"
@@ -559,20 +560,55 @@
           <p class="text-slate-400 text-[11px]">PIN para consulta externa: <span class="font-mono font-bold text-slate-700 dark:text-slate-300">{{ tramiteEnDetalle.portal_seguimiento ? tramiteEnDetalle.portal_seguimiento.pin_seguimiento : 'N/A' }}</span></p>
         </div>
 
-        <!-- Línea de Tiempo de Etapas Procesales -->
-        <div class="space-y-3">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Historial de Etapas Procesales</h4>
-          <div class="relative pl-6 border-l-2 border-blue-500 space-y-4 text-xs">
-            <div v-for="f in tramiteEnDetalle.flujos" :key="f.id" class="relative">
-              <span class="absolute -left-[31px] top-0 w-3.5 h-3.5 rounded-full bg-blue-600 ring-4 ring-white dark:ring-slate-900"></span>
-              <p class="font-bold text-slate-800 dark:text-slate-200 text-sm">{{ f.etapa_actual }}</p>
-              <p class="text-[11px] text-slate-500">Iniciado: {{ formatFecha(f.fecha_inicio_etapa) }}</p>
-              <span class="inline-block mt-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold" :class="f.estado_etapa === 'COMPLETADO' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'">
-                {{ formatEstadoLegible(f.estado_etapa) }}
-              </span>
-            </div>
+        <section class="space-y-3">
+          <h4 class="text-sm font-bold text-slate-800 dark:text-slate-200">Observaciones del trámite</h4>
+          <p v-if="!tramiteEnDetalle.observaciones?.length" class="text-xs text-slate-500">Sin observaciones registradas.</p>
+          <ul v-else class="space-y-2">
+            <li v-for="obs in tramiteEnDetalle.observaciones" :key="obs.id"
+              class="rounded-xl border border-slate-200 p-3 text-xs dark:border-slate-700">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <p class="font-semibold text-slate-800 dark:text-slate-200">{{ formatEstadoLegible(obs.tipo_observacion) }}</p>
+                <span class="rounded-full px-2 py-0.5 font-semibold"
+                  :class="obs.estado === 'ABIERTA' ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-800'">
+                  {{ formatEstadoLegible(obs.estado) }}
+                </span>
+              </div>
+              <p class="mt-1 whitespace-pre-wrap break-words text-slate-700 dark:text-slate-200">{{ obs.descripcion }}</p>
+              <p v-if="obs.fecha_observacion" class="mt-1 text-slate-500">Registrada el {{ formatFecha(obs.fecha_observacion) }}</p>
+              <p v-if="obs.fecha_subsanacion" class="text-slate-500">Subsanada el {{ formatFecha(obs.fecha_subsanacion) }}</p>
+            </li>
+          </ul>
+        </section>
+
+        <section class="space-y-3">
+          <h4 class="text-sm font-bold text-slate-800 dark:text-slate-200">Etapas del trámite</h4>
+          <ol class="space-y-4 border-l-2 border-slate-200 pl-5 dark:border-slate-700">
+            <li v-for="etapa in etapasSeguimiento" :key="etapa.nombre" class="relative text-xs"
+              :aria-current="etapa.actual ? 'step' : undefined">
+              <span aria-hidden="true" class="absolute -left-7 top-0.5 h-3.5 w-3.5 rounded-full ring-4 ring-white dark:ring-slate-900"
+                :class="etapa.completa ? 'bg-emerald-500' : etapa.actual ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-600'"></span>
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <p class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ etapa.nombre }}</p>
+                <span class="rounded-full px-2 py-0.5 font-semibold"
+                  :class="etapa.completa ? 'bg-emerald-100 text-emerald-800' : etapa.actual ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-600'">
+                  {{ etapa.estado }}
+                </span>
+              </div>
+              <div v-for="registro in etapa.registros" :key="registro.id" class="mt-1 text-slate-500">
+                <p v-if="registro.fecha_inicio_etapa">Inicio: {{ formatFecha(registro.fecha_inicio_etapa) }}</p>
+                <p v-if="registro.fecha_fin_etapa && registro.fecha_fin_etapa !== etapa.fechaCierre">Cierre: {{ formatFecha(registro.fecha_fin_etapa) }}</p>
+              </div>
+              <p v-if="etapa.fechaCierre" class="mt-1 text-slate-500">Cierre: {{ formatFecha(etapa.fechaCierre) }}</p>
+            </li>
+          </ol>
+          <div v-if="otrosRegistrosSeguimiento.length" class="space-y-1 text-xs text-slate-500">
+            <h5 class="font-semibold">Otros registros del trámite</h5>
+            <p v-for="registro in otrosRegistrosSeguimiento" :key="registro.id">
+              {{ registro.etapa_actual }} · {{ formatEstadoLegible(registro.estado_etapa) }}
+              <template v-if="registro.fecha_inicio_etapa"> · {{ formatFecha(registro.fecha_inicio_etapa) }}</template>
+            </p>
           </div>
-        </div>
+        </section>
 
         <button @click="modalSeguimientoDetalle = false" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-full transition cursor-pointer">
           Cerrar Detalle
@@ -847,6 +883,53 @@ const tipoSeleccionadoInfo = computed(() => {
 const modalSeguimientoDetalle = ref(false);
 const tramiteEnDetalle = ref({});
 
+const etapasTramite = [
+  { nombre: 'Recepción', nombresRegistro: ['recepcion', 'recepcion y cotejo'] },
+  { nombre: 'Revisión y cotejo', nombresRegistro: ['revision y cotejo', 'cotejo', 'validacion de requisitos'] },
+  { nombre: 'Compilación del expediente', nombresRegistro: ['compilacion de expediente', 'compilacion del expediente'] },
+  { nombre: 'Firma vicerrectoral', nombresRegistro: ['firma vicerrectoral'] },
+  { nombre: 'Despacho y notificación', nombresRegistro: ['despacho', 'despacho y notificacion'] },
+];
+const avancePorEstado = {
+  INICIADO: 0,
+  REQUISITOS_VALIDADOS: 1,
+  EXPEDIENTE_COMPILADO: 2,
+  EN_FIRMA: 3,
+  FIRMADO: 4,
+  DESPACHADO: 5,
+};
+
+function indiceEtapaRegistro(registro) {
+  const nombre = registro.etapa_actual.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+  return etapasTramite.findIndex(etapa => etapa.nombresRegistro.includes(nombre));
+}
+
+const registrosSeguimiento = computed(() => tramiteEnDetalle.value.flujos ?? []);
+const otrosRegistrosSeguimiento = computed(() => registrosSeguimiento.value.filter(registro => indiceEtapaRegistro(registro) === -1));
+const etapasSeguimiento = computed(() => {
+  const tramite = tramiteEnDetalle.value;
+  const indiceUltimoRegistro = registrosSeguimiento.value.map(indiceEtapaRegistro).findLast(indice => indice >= 0);
+  const avance = avancePorEstado[tramite.estado] ?? indiceUltimoRegistro ?? 0;
+  const estadoActual = {
+    OBSERVADO: 'Observada',
+    RECHAZADO: 'Interrumpida',
+    FIRMADO: 'Pendiente de despacho',
+  }[tramite.estado] ?? 'En curso';
+  const fechasCierre = {
+    3: tramite.firma_digital?.fecha_firma,
+    4: tramite.despacho?.fecha_despacho,
+  };
+
+  return etapasTramite.map((etapa, indice) => ({
+    nombre: etapa.nombre,
+    actual: indice === avance,
+    completa: indice < avance,
+    estado: indice < avance ? 'Completada' : indice === avance ? estadoActual : 'Pendiente',
+    registros: registrosSeguimiento.value.filter(registro => indiceEtapaRegistro(registro) === indice),
+    fechaCierre: fechasCierre[indice],
+  }));
+});
+
 function verDetalleSeguimiento(t) {
   tramiteEnDetalle.value = t;
   modalSeguimientoDetalle.value = true;
@@ -1105,10 +1188,8 @@ async function cancelarStripe() {
 }
 
 function puedeAdjuntar(t) {
-  // Solo se puede adjuntar si el trámite está en etapa inicial (RECEPCION / INICIADO)
-  // o si el trámite fue OBSERVADO por el Encargado para subsanación.
-  // En 'REQUISITOS_VALIDADOS', 'EXPEDIENTE_COMPILADO', 'EN_FIRMA', 'FIRMADO' o 'DESPACHADO' queda cerrado.
-  return t.estado === 'INICIADO' || t.estado === 'OBSERVADO';
+  if (!['INICIADO', 'OBSERVADO', 'REQUISITOS_VALIDADOS'].includes(t.estado)) return false;
+  return (t.tipo_tramite?.etapas_adjuntos ?? ['INICIADO', 'OBSERVADO']).includes(t.estado);
 }
 
 function getMotivoBloqueoAdjunto(t) {

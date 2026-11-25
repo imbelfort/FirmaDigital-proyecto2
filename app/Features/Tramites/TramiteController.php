@@ -11,6 +11,7 @@ use App\Models\BitacoraTramite;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class TramiteController
 {
@@ -76,6 +77,7 @@ class TramiteController
 
     public function storeTipoTramite(Request $request)
     {
+        $etapasAdjuntos = $this->validarEtapasAdjuntos($request);
         $request->validate([
             'codigo' => 'required|string|unique:tipo_tramite,codigo|max:50',
             'nombre' => 'required|string|max:150',
@@ -91,6 +93,7 @@ class TramiteController
             'tiempo_sla_horas' => $request->tiempo_sla_horas,
             'costo_bs' => $request->costo_bs,
             'estado' => 'ACTIVO',
+            'etapas_adjuntos' => $etapasAdjuntos,
         ]);
 
         return response()->json([
@@ -102,6 +105,7 @@ class TramiteController
 
     public function updateTipoTramite(Request $request, $id)
     {
+        $etapasAdjuntos = $this->validarEtapasAdjuntos($request);
         $tipo = TipoTramite::findOrFail($id);
 
         $request->validate([
@@ -117,6 +121,7 @@ class TramiteController
             'tiempo_sla_horas' => $request->tiempo_sla_horas ?? $tipo->tiempo_sla_horas,
             'costo_bs' => $request->costo_bs ?? $tipo->costo_bs,
             'estado' => $request->estado ?? $tipo->estado,
+            ...($etapasAdjuntos !== null ? ['etapas_adjuntos' => $etapasAdjuntos] : []),
         ]);
 
         return response()->json([
@@ -124,6 +129,28 @@ class TramiteController
             'message' => 'Tipo de trámite actualizado correctamente.',
             'data' => $tipo,
         ]);
+    }
+
+    private function validarEtapasAdjuntos(Request $request): ?array
+    {
+        if (!$request->has('etapas_adjuntos')) {
+            return null;
+        }
+
+        $usuario = $request->session()->get('usuario');
+        abort_unless(
+            $usuario?->rol === 'ADMINISTRATIVO'
+                && (int) $request->session()->get('usuario_autenticado_id') === (int) $usuario->id_usuario,
+            403,
+            'Inicia sesión como administrador para configurar las etapas de adjuntos.'
+        );
+
+        $datos = $request->validate([
+            'etapas_adjuntos' => ['present', 'array', 'list'],
+            'etapas_adjuntos.*' => ['string', 'distinct', Rule::in(TipoTramite::ETAPAS_ADJUNTOS_PERMITIDAS)],
+        ]);
+
+        return $datos['etapas_adjuntos'];
     }
 
     public function destroyTipoTramite($id)
@@ -228,9 +255,8 @@ class TramiteController
             'id_usuario_responsable' => 'nullable|integer',
         ]);
 
-        $tramite = Tramite::findOrFail($id);
-
-        return DB::transaction(function () use ($tramite, $request) {
+        return DB::transaction(function () use ($id, $request) {
+            $tramite = Tramite::lockForUpdate()->findOrFail($id);
             // Cerrar etapa previa
             FlujoTramite::where('id_tramite', $tramite->id)
                 ->where('estado_etapa', 'EN_PROCESO')
