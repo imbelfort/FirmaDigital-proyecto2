@@ -24,7 +24,27 @@ class ReporteController
         $porEstado = DB::table('tramite')
             ->select('estado', DB::raw('count(*) as total'))
             ->groupBy('estado')
+            ->orderBy('estado')
             ->get();
+
+        $primerMes = now()->startOfMonth()->subMonths(5);
+        $finPeriodo = $primerMes->copy()->addMonths(6);
+        $solicitudesPorDia = Tramite::query()
+            ->where('fecha_solicitud', '>=', $primerMes)
+            ->where('fecha_solicitud', '<', $finPeriodo)
+            ->selectRaw('DATE(fecha_solicitud) as dia, COUNT(*) as total')
+            ->groupByRaw('DATE(fecha_solicitud)')
+            ->get();
+
+        $totalesPorMes = $solicitudesPorDia->groupBy(fn ($fila) => substr($fila->dia, 0, 7));
+        $tramitesPorMes = [];
+        for ($mes = $primerMes->copy(); $mes < $finPeriodo; $mes->addMonth()) {
+            $periodo = $mes->format('Y-m');
+            $tramitesPorMes[] = [
+                'mes' => $periodo,
+                'total' => $totalesPorMes->get($periodo, collect())->sum('total'),
+            ];
+        }
 
         // SLA Compliance
         $slaCumplidos = MonitoreoSla::where('estado_sla', 'CUMPLIDO_EN_TIEMPO')->count();
@@ -51,6 +71,7 @@ class ReporteController
                 'tasa_sla' => $tasaCumplimiento,
             ],
             'tramites_por_estado' => $porEstado,
+            'tramites_por_mes' => $tramitesPorMes,
             'firmas_por_autoridad' => $firmasPorAutoridad,
             'indicadores' => $indicadores,
         ]);

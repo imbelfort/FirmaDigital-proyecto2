@@ -77,9 +77,15 @@ class PagoController
             ], 422);
         }
 
-        $pago = PagoTramite::updateOrCreate(
-            ['id_tramite' => $tramite->id],
-            [
+        $pago = DB::transaction(function () use ($tramite, $paymentNumber, $qrData, $monto) {
+            $tramite = Tramite::lockForUpdate()->findOrFail($tramite->id);
+            $pago = $tramite->pago()->firstOrNew();
+
+            if ($pago->estado === 'COMPLETADO') {
+                return $pago;
+            }
+
+            $pago->fill([
                 'payment_number' => $paymentNumber,
                 'transaction_id' => $qrData['transaction_id'] ?? null,
                 'monto' => $monto,
@@ -90,8 +96,18 @@ class PagoController
                 'checkout_url' => $qrData['checkout_url'] ?? null,
                 'deep_link' => $qrData['deep_link'] ?? null,
                 'fecha_expiracion' => $qrData['expiration_date'] ?? now()->addDay(),
-            ]
-        );
+            ]);
+
+            return $tramite->pago()->save($pago);
+        });
+
+        if ($pago->estado === 'COMPLETADO') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Este trámite ya cuenta con pago acreditado y confirmado.',
+                'pago' => $pago,
+            ], 400);
+        }
 
         BitacoraTramite::create([
             'id_tramite' => $tramite->id,
@@ -183,38 +199,42 @@ class PagoController
     }
 
     /**
-     * Confirmar pago (Manual / Simulado en Demo o verificado por banca móvil)
+     * Acreditar el arancel manualmente desde ventanilla.
      */
     public function confirmarPago(Request $request, $idTramite)
     {
-        $tramite = Tramite::with('pago')->findOrFail($idTramite);
-        $pago = $tramite->pago;
+        $usuario = $request->session()->get('usuario');
+        abort_unless($usuario, 401, 'Inicia sesión para validar el pago.');
+        abort_unless(in_array($usuario->rol, ['ENCARGADO', 'ADMINISTRATIVO'], true), 403, 'Tu perfil no puede validar pagos en ventanilla.');
 
-        if (!$pago) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No se encontró registro de pago para este trámite.',
-            ], 404);
-        }
-
-        return DB::transaction(function () use ($tramite, $pago) {
-            $pago->estado = 'COMPLETADO';
-            $pago->fecha_pago = now();
-            $pago->save();
-
-            BitacoraTramite::create([
-                'id_tramite' => $tramite->id,
-                'id_usuario' => session('usuario')->id_usuario ?? $tramite->id_usuario_solicitante,
-                'accion' => 'PAGO_CONFIRMADO',
-                'detalle' => "Pago acreditado exitosamente por Bs. {$pago->monto} vía PagoFácil QR",
-                'ip_origen' => request()->ip(),
-                'fecha_evento' => now(),
+        return DB::transaction(function () use ($idTramite, $request, $usuario) {
+            $tramite = Tramite::with('tipoTramite')->lockForUpdate()->findOrFail($idTramite);
+            $pago = $tramite->pago()->firstOrNew([], [
+                'payment_number' => 'PAGO-' . $tramite->codigo_tramite,
+                'monto' => $tramite->tipoTramite->costo_bs ?? 50.00,
+                'moneda' => 'BOB',
             ]);
+
+            if ($pago->estado !== 'COMPLETADO') {
+                $pago->metodo_pago = 'MANUAL_VENTANILLA';
+                $pago->estado = 'COMPLETADO';
+                $pago->fecha_pago = now();
+                $tramite->pago()->save($pago);
+
+                BitacoraTramite::create([
+                    'id_tramite' => $tramite->id,
+                    'id_usuario' => $usuario->id_usuario,
+                    'accion' => 'PAGO_CONFIRMADO',
+                    'detalle' => "Arancel de Bs. {$pago->monto} acreditado manualmente en ventanilla.",
+                    'ip_origen' => $request->ip(),
+                    'fecha_evento' => now(),
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
                 'message' => "¡Pago acreditado con éxito! El trámite {$tramite->codigo_tramite} ahora cuenta con arancel cancelado.",
-                'tramite' => $tramite->load(['pago', 'tipoTramite']),
+                'tramite' => $tramite->setRelation('pago', $pago),
             ]);
         });
     }

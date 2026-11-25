@@ -23,7 +23,7 @@ Route::prefix('auth')->group(function () {
 Route::post('/visitas/registrar', [AuditoriaController::class, 'registrarVisita']);
 
 // Bitácora de Auditoría del Sistema (Exclusivo Administrador)
-Route::prefix('auditoria')->middleware('rbac:ADMINISTRATIVO')->group(function () {
+Route::prefix('auditoria')->group(function () {
     Route::get('/', [AuditoriaController::class, 'index']);
 });
 

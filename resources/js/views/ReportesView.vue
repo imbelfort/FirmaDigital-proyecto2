@@ -3,12 +3,12 @@
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-2xl font-bold text-slate-900 dark:text-white heading-font">Reportes y Estadísticas Oficiales</h1>
-        <p class="text-xs text-slate-500">Métricas analíticas institucionales con protección contra división por cero (CU8).</p>
       </div>
-      <button @click="loadData" class="px-3.5 py-1.5 text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 rounded-lg text-slate-700 dark:text-slate-300 transition">
-        Refrescar Métricas
+      <button type="button" @click="loadData" :disabled="loading" class="px-3.5 py-1.5 text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 rounded-lg text-slate-700 dark:text-slate-300 transition disabled:opacity-60">
+        {{ loading ? 'Cargando…' : 'Refrescar Métricas' }}
       </button>
     </div>
+    <p v-if="error" role="alert" class="text-sm text-red-700 dark:text-red-300">{{ error }}</p>
 
     <!-- KPIs -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -31,30 +31,14 @@
     </div>
 
     <!-- Detalle de Trámites por Estado y Firmas por Autoridad -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <!-- Trámites por Estado -->
-      <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
-        <h3 class="font-bold text-base text-slate-900 dark:text-white">Distribución de Trámites por Estado</h3>
-        <div class="space-y-3">
-          <div v-for="item in data.tramites_por_estado" :key="item.estado" class="space-y-1">
-            <div class="flex justify-between text-xs font-semibold">
-              <span class="text-slate-700 dark:text-slate-300">{{ item.estado }}</span>
-              <span class="text-slate-500 font-mono">{{ item.total }}</span>
-            </div>
-            <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
-              <div
-                class="bg-blue-600 h-2 rounded-full"
-                :style="`width: ${data.kpis?.total_tramites ? (item.total / data.kpis.total_tramites) * 100 : 0}%`"
-              ></div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div v-if="data.kpis" class="space-y-4">
+      <GraficosTramites :por-estado="data.tramites_por_estado" :por-mes="data.tramites_por_mes" />
 
       <!-- Firmas Emitidas por Autoridad -->
       <div class="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
         <h3 class="font-bold text-base text-slate-900 dark:text-white">Firmas Digitales por Autoridad</h3>
-        <div class="space-y-3">
+        <p v-if="!data.firmas_por_autoridad?.length" class="text-sm text-slate-500">No hay firmas registradas.</p>
+        <div v-else class="space-y-3">
           <div v-for="aut in data.firmas_por_autoridad" :key="aut.nombre" class="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl flex items-center justify-between text-xs">
             <div>
               <p class="font-bold text-slate-900 dark:text-white">{{ aut.nombre }} {{ aut.apellidos }}</p>
@@ -71,15 +55,21 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
+import GraficosTramites from '../components/GraficosTramites.vue';
 
 const data = ref({});
-
+const loading = ref(false);
+const error = ref('');
 async function loadData() {
+  loading.value = true;
+  error.value = '';
   try {
     const res = await axios.get('/api/reportes/dashboard');
     data.value = res.data;
-  } catch (e) {
-    console.error(e);
+  } catch {
+    error.value = 'No se pudieron cargar las métricas. Vuelve a intentar.';
+  } finally {
+    loading.value = false;
   }
 }
 

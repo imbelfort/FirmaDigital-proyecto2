@@ -977,9 +977,7 @@ async function validarPagoEnVentanilla(t) {
   if (procesandoAccion.value) return;
   procesandoAccion.value = true;
   try {
-    const res = await axios.post(`/api/pagos/tramite/${t.id}/confirmar`, {
-      observacion: 'Arancel validado/eximido por Encargado de Ventanilla en caja universitaria.'
-    });
+    await axios.post(`/api/pagos/tramite/${t.id}/confirmar`);
     actions.toast(`Arancel del trámite ${t.codigo_tramite} validado con éxito.`, 'success', 'Pago Acreditado');
     await loadData();
   } catch (e) {

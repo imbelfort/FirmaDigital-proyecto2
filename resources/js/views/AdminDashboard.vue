@@ -99,6 +99,12 @@
         </div>
       </div>
 
+      <GraficosTramites v-if="reporteTramites" :por-estado="reporteTramites.tramites_por_estado" :por-mes="reporteTramites.tramites_por_mes" />
+      <p v-else-if="errorGraficos" role="alert" class="text-sm text-red-700 dark:text-red-300">
+        No se pudieron cargar los gráficos de trámites.
+        <button type="button" class="font-semibold underline" @click="cargarGraficos">Reintentar</button>
+      </p>
+
       <!-- KPIs de Pagos Estadísticos -->
       <div>
         <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Estadísticas Totales de Pagos (Aranceles Universita­rios)</h3>
@@ -450,7 +456,7 @@
             <span>Bitácora de Auditoría del Sistema</span>
             <span class="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 font-bold">Confidencial</span>
           </h2>
-          <p class="text-xs text-slate-500">Registro inmutable de accesos, intentos fallidos, logins y tráfico operativo.</p>
+          <p class="text-xs text-slate-500">Registro de visitas, inicios de sesión y operaciones del sistema.</p>
         </div>
         <div class="flex items-center space-x-2">
           <select
@@ -462,6 +468,7 @@
             <option value="LOGIN_EXITOSO">Logins Exitosos</option>
             <option value="LOGIN_FALLIDO">Logins Fallidos</option>
             <option value="TRAFICO_OPERATIVO">Tráfico Operativo</option>
+            <option value="VISITA_PAGINA">Visitas a páginas</option>
             <option value="ACCESO_NO_AUTORIZADO">Bloqueos de Seguridad</option>
           </select>
           <button
@@ -472,6 +479,8 @@
           </button>
         </div>
       </div>
+
+      <p v-if="errorAuditoria" role="alert" class="text-sm text-red-700 dark:text-red-300">{{ errorAuditoria }}</p>
 
       <!-- KPIs de Auditoría -->
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
@@ -491,6 +500,27 @@
           <span class="text-[10px] font-bold uppercase tracking-wider text-red-600 block">Bloqueos RBAC</span>
           <p class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">{{ auditoriaKpis.bloqueos_seguridad }}</p>
         </div>
+      </div>
+
+      <div v-if="!errorAuditoria" class="grid gap-4 lg:grid-cols-2">
+        <section v-for="ranking in rankingsAuditoria" :key="ranking.titulo" class="m3-card space-y-4 border border-slate-200 p-5 dark:border-slate-800">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white">{{ ranking.titulo }}</h3>
+            <p class="text-xs text-slate-500">{{ ranking.resumen }}</p>
+          </div>
+          <p v-if="!ranking.filas.length" class="text-sm text-slate-500">Sin registros.</p>
+          <ol v-else class="space-y-3">
+            <li v-for="fila in ranking.filas" :key="fila.nombre" class="space-y-1">
+              <div class="flex justify-between gap-2 text-xs text-slate-700 dark:text-slate-300">
+                <span class="min-w-0 break-all">{{ fila.nombre }}</span>
+                <span class="shrink-0 font-mono font-bold">{{ fila.total }}</span>
+              </div>
+              <div aria-hidden="true" class="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                <div class="h-full rounded-full bg-blue-600 dark:bg-blue-400" :style="{ width: `${fila.total / Math.max(1, ranking.filas[0].total) * 100}%` }"></div>
+              </div>
+            </li>
+          </ol>
+        </section>
       </div>
 
       <!-- Tabla de Eventos -->
@@ -530,9 +560,13 @@
                   {{ log.descripcion }}
                 </td>
                 <td class="p-3 font-mono text-[11px] text-slate-500">
-                  <span class="font-bold text-blue-600 dark:text-blue-400">{{ log.metodo_http || 'GET' }}</span> /{{ log.ruta_accedida }}
+                  <span v-if="log.tipo_evento === 'VISITA_PAGINA'">{{ log.ruta_accedida }}</span>
+                  <template v-else>
+                    <span class="font-bold text-blue-600 dark:text-blue-400">{{ log.metodo_http || '—' }}</span>
+                    {{ log.ruta_accedida ? `/${log.ruta_accedida}` : '—' }}
+                  </template>
                 </td>
-                <td class="p-3 font-mono text-[11px] text-slate-500">{{ log.ip_origen || '127.0.0.1' }}</td>
+                <td class="p-3 font-mono text-[11px] text-slate-500">{{ log.ip_origen || '—' }}</td>
                 <td class="p-3 text-center">
                   <span class="px-2 py-0.5 rounded font-mono text-[10px] font-bold" :class="log.status_code >= 400 ? 'bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'">
                     {{ log.status_code || 200 }}
@@ -722,9 +756,12 @@
 import { ref, computed, onMounted } from 'vue';
 import { state, actions } from '../stores/appState';
 import axios from 'axios';
+import GraficosTramites from '../components/GraficosTramites.vue';
 
 const activeTab = ref('metricas');
 const tramites = ref([]);
+const reporteTramites = ref(null);
+const errorGraficos = ref(false);
 const tiposTramite = ref([]);
 const usuarios = ref([]);
 const filtroUsuario = ref('');
@@ -754,12 +791,31 @@ function limpiarFiltrosUsuario() {
 // Bitácora de Auditoría
 const filtroTipoAuditoria = ref('TODOS');
 const auditoriaLogs = ref([]);
+const visitasPorPagina = ref([]);
+const operacionesPorRuta = ref([]);
+const errorAuditoria = ref('');
 const auditoriaKpis = ref({
   logins_exitosos: 0,
   logins_fallidos: 0,
   trafico_operativo: 0,
   bloqueos_seguridad: 0,
+  visitas_globales: 0,
 });
+const rankingsAuditoria = computed(() => [
+  {
+    titulo: 'Páginas más visitadas',
+    resumen: `${auditoriaKpis.value.visitas_globales} visitas acumuladas · Hasta 10 páginas`,
+    filas: visitasPorPagina.value.map(pagina => ({ nombre: pagina.pagina, total: pagina.total_visitas })),
+  },
+  {
+    titulo: 'Rutas con más operaciones registradas',
+    resumen: 'Hasta 10 rutas, agrupadas por método HTTP',
+    filas: operacionesPorRuta.value.map(ruta => ({
+      nombre: `${ruta.metodo_http || '—'} /${ruta.ruta_accedida}`,
+      total: ruta.total,
+    })),
+  },
+]);
 
 // Modal y Edición de Usuario
 const modalEditarUsuario = ref(false);
@@ -895,7 +951,18 @@ async function loadData() {
   }
 }
 
+async function cargarGraficos() {
+  errorGraficos.value = false;
+  try {
+    const res = await axios.get('/api/reportes/dashboard');
+    reporteTramites.value = res.data;
+  } catch {
+    errorGraficos.value = true;
+  }
+}
+
 async function cargarAuditoria() {
+  errorAuditoria.value = '';
   try {
     const res = await axios.get('/api/auditoria', {
       params: { tipo: filtroTipoAuditoria.value }
@@ -903,9 +970,12 @@ async function cargarAuditoria() {
     if (res.data.success) {
       auditoriaLogs.value = res.data.data || [];
       auditoriaKpis.value = res.data.kpis || auditoriaKpis.value;
+      visitasPorPagina.value = res.data.visitas_por_pagina || [];
+      operacionesPorRuta.value = res.data.operaciones_por_ruta || [];
     }
   } catch (e) {
-    console.error('Error al cargar bitácora:', e);
+    auditoriaLogs.value = [];
+    errorAuditoria.value = e.response?.data?.message || 'No se pudo cargar la bitácora.';
   }
 }
 
@@ -1029,6 +1099,7 @@ async function alternarEstadoTipo(tipo) {
 
 onMounted(() => {
   loadData();
+  cargarGraficos();
   cargarAuditoria();
 });
 </script>

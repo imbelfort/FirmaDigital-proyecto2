@@ -43,7 +43,8 @@ class AuthController
         }
 
         // Almacenar en sesión
-        session(['usuario' => $usuario]);
+        $request->session()->regenerate();
+        session(['usuario' => $usuario, 'usuario_autenticado_id' => $usuario->id_usuario]);
 
         $this->logAuditoria($request, $usuario->id_usuario, $usuario->registro, 'LOGIN_EXITOSO', "Sesión iniciada exitosamente con rol {$usuario->rol}.", 200);
 
@@ -93,7 +94,7 @@ class AuthController
 
     public function logout(Request $request)
     {
-        session()->forget('usuario');
+        $request->session()->invalidate();
         return response()->json([
             'success' => true,
             'message' => 'Sesión finalizada exitosamente.',
