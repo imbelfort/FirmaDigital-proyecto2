@@ -82,9 +82,20 @@
               <span class="m3-badge uppercase" :class="getEstadoBadge(t.estado)">
                 {{ formatEstadoLegible(t.estado) }}
               </span>
-              <span class="block text-[10px] font-bold mt-1" :class="isPagado(t) ? 'text-emerald-600' : 'text-amber-600'">
-                {{ isPagado(t) ? 'PAGADO' : 'PAGO PENDIENTE' }} (Bs. {{ t.tipo_tramite ? t.tipo_tramite.costo_bs : '0.00' }})
-              </span>
+              <div class="flex items-center justify-end space-x-1.5 mt-1">
+                <span class="text-[10px] font-bold" :class="isPagado(t) ? 'text-emerald-600' : 'text-amber-600'">
+                  {{ isPagado(t) ? 'PAGADO' : 'PAGO PENDIENTE' }} (Bs. {{ t.tipo_tramite ? t.tipo_tramite.costo_bs : '0.00' }})
+                </span>
+                <!-- Botón rápido para el Encargado: Eximir o Validar Pago en Ventanilla si PagoFácil no está activo -->
+                <button
+                  v-if="!isPagado(t) && !['FIRMADO', 'DESPACHADO'].includes(t.estado)"
+                  @click="validarPagoEnVentanilla(t)"
+                  class="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 cursor-pointer transition shadow-2xs"
+                  title="Permite al encargado validar el arancel en ventanilla o eximirlo sin depender de la pasarela QR"
+                >
+                  Omitir / Validar Pago
+                </button>
+              </div>
             </div>
           </div>
 
@@ -960,6 +971,22 @@ function formatEstadoLegible(texto) {
 
 function isPagado(t) {
   return t.pago && t.pago.estado === 'COMPLETADO';
+}
+
+async function validarPagoEnVentanilla(t) {
+  if (procesandoAccion.value) return;
+  procesandoAccion.value = true;
+  try {
+    const res = await axios.post(`/api/pagos/tramite/${t.id}/confirmar`, {
+      observacion: 'Arancel validado/eximido por Encargado de Ventanilla en caja universitaria.'
+    });
+    actions.toast(`Arancel del trámite ${t.codigo_tramite} validado con éxito.`, 'success', 'Pago Acreditado');
+    await loadData();
+  } catch (e) {
+    actions.toast(e.response?.data?.message || 'Error al validar el pago en ventanilla.', 'error', 'Error Pago');
+  } finally {
+    procesandoAccion.value = false;
+  }
 }
 
 async function loadData() {
