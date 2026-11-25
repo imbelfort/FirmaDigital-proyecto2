@@ -37,8 +37,7 @@ class PagoFacilService
         }
 
         try {
-            $response = Http::withoutVerifying()
-                ->withHeaders([
+            $response = Http::withHeaders([
                     'tcTokenService' => $this->tokenService,
                     'tcTokenSecret' => $this->tokenSecret,
                     'Response-Language' => 'es',
@@ -194,7 +193,7 @@ class PagoFacilService
             ];
         }
 
-        $token = $this->login();
+        $token = $this->login()['token'];
         if (!$token) {
             return [
                 'error' => 1,

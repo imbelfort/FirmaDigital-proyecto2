@@ -515,5 +515,6 @@ class DatabaseSeeder extends Seeder
                 'fecha_generacion' => now()->subHours(12),
             ],
         ]);
+        $this->call(PaymentDemoSeeder::class);
     }
 }

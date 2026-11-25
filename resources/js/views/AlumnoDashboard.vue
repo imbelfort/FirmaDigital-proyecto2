@@ -107,7 +107,7 @@
           <div>
             <span class="text-[10px] uppercase font-bold tracking-wider text-emerald-200">Resumen de Inversión Académica</span>
             <h2 class="text-xl sm:text-2xl font-black mt-0.5">Historial de Pagos y Aranceles Cancelados</h2>
-            <p class="text-xs text-emerald-100">Desglose oficial de todos los pagos realizados mediante PagoFácil QR.</p>
+            <p class="text-xs text-emerald-100">Desglose de los pagos acreditados por trámite.</p>
           </div>
           <div class="text-right">
             <span class="text-[10px] text-emerald-200 uppercase font-semibold">Total Cancelado</span>
@@ -130,7 +130,7 @@
                 <tr>
                   <th class="p-3.5">Código Trámite</th>
                   <th class="p-3.5">Concepto / Trámite</th>
-                  <th class="p-3.5">Ref. PagoFácil</th>
+                  <th class="p-3.5">Referencia</th>
                   <th class="p-3.5">Fecha de Pago</th>
                   <th class="p-3.5">Método</th>
                   <th class="p-3.5 text-right">Monto (Bs.)</th>
@@ -143,7 +143,7 @@
                   <td class="p-3.5 font-semibold text-slate-800 dark:text-slate-200">{{ t.tipo_tramite ? t.tipo_tramite.nombre : t.asunto }}</td>
                   <td class="p-3.5 font-mono text-slate-500 text-[11px]">{{ t.pago ? t.pago.payment_number : 'PAGO-' + t.codigo_tramite }}</td>
                   <td class="p-3.5 text-slate-500">{{ formatFecha(t.pago && t.pago.fecha_pago ? t.pago.fecha_pago : t.fecha_solicitud) }}</td>
-                  <td class="p-3.5"><span class="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 font-mono text-[10px] font-bold text-slate-600 dark:text-slate-300">PAGOFACIL QR</span></td>
+                  <td class="p-3.5"><span class="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 font-mono text-[10px] font-bold text-slate-600 dark:text-slate-300">{{ paymentMethods[t.pago.metodo_pago] || t.pago.metodo_pago }}</span></td>
                   <td class="p-3.5 text-right font-black text-emerald-600 dark:text-emerald-400 text-sm">
                     Bs. {{ t.pago && t.pago.monto ? Number(t.pago.monto).toFixed(2) : (t.tipo_tramite ? Number(t.tipo_tramite.costo_bs).toFixed(2) : '0.00') }}
                   </td>
@@ -264,7 +264,7 @@
               <div class="flex items-center space-x-1.5 mt-0.5">
                 <span class="w-2 h-2 rounded-full" :class="isPagado(t) ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'"></span>
                 <span class="font-bold text-[11px]" :class="isPagado(t) ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'">
-                  {{ isPagado(t) ? 'PAGO CONFIRMADO' : 'PAGO PENDIENTE' }}
+                  {{ paymentStatuses[paymentStatus(t.pago)] }}
                 </span>
               </div>
             </div>
@@ -588,9 +588,6 @@
         </div>
 
         <div>
-          <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-300">
-            PagoFácil QR Bancario
-          </span>
           <h3 class="text-xl font-extrabold text-slate-900 dark:text-white mt-1">Pago de Arancel Universitario</h3>
           <p class="text-xs text-slate-500 font-mono">{{ tramiteAPagar.codigo_tramite }}</p>
         </div>
@@ -600,16 +597,44 @@
           <span class="text-2xl font-black text-emerald-600 dark:text-emerald-400">Bs. {{ tramiteAPagar.tipo_tramite ? tramiteAPagar.tipo_tramite.costo_bs : '0.00' }}</span>
         </div>
 
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" @click="generarQr(tramiteAPagar)" :disabled="loadingPago || verificandoPago"
+            :aria-pressed="metodoPago === 'qr'"
+            class="rounded-full border border-slate-300 px-4 py-2 text-sm font-bold disabled:opacity-50">
+            QR
+          </button>
+          <button type="button" @click="seleccionarStripe" :disabled="loadingPago || verificandoPago"
+            :aria-pressed="metodoPago === 'stripe'"
+            class="rounded-full border border-indigo-400 px-4 py-2 text-sm font-bold disabled:opacity-50">
+            Stripe
+          </button>
+        </div>
+
         <!-- Contenedor del QR o Error de Configuración -->
         <div v-if="pagoError" class="p-4 rounded-2xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-center space-y-2">
           <div class="w-10 h-10 mx-auto rounded-full bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400 flex items-center justify-center">
             <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
           </div>
-          <p class="text-xs font-bold text-red-700 dark:text-red-300">Pasarela PagoFácil no disponible</p>
           <p class="text-[11px] text-red-600 dark:text-red-400">{{ pagoError }}</p>
         </div>
 
-        <div v-else class="space-y-3">
+        <div v-if="metodoPago === 'stripe'" class="space-y-3">
+          <p class="text-sm text-slate-600 dark:text-slate-300">Ingresa los datos de tu tarjeta en la página segura de Stripe.</p>
+          <button type="button" @click="iniciarStripe" :disabled="loadingPago"
+            class="w-full rounded-full bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-50">
+            {{ loadingPago ? 'Contactando a Stripe...' : 'Continuar a Stripe' }}
+          </button>
+          <p v-if="mensajeStripe" role="status" class="text-sm text-slate-700 dark:text-slate-200">{{ mensajeStripe }}</p>
+          <div v-if="tramiteAPagar.pago?.metodo_pago === 'STRIPE'" class="flex flex-wrap justify-center gap-3 text-xs">
+            <button type="button" @click="verificarPago(tramiteAPagar.id)" :disabled="loadingPago || verificandoPago"
+              class="font-semibold text-indigo-600 dark:text-indigo-300 disabled:opacity-50">Verificar pago</button>
+            <button v-if="['PENDIENTE', 'RECHAZADO'].includes(tramiteAPagar.pago.estado)" type="button"
+              @click="cancelarStripe" :disabled="loadingPago || verificandoPago"
+              class="font-semibold text-slate-600 dark:text-slate-300 disabled:opacity-50">Cancelar intento</button>
+          </div>
+        </div>
+
+        <div v-if="metodoPago === 'qr' && !pagoError" class="space-y-3">
           <div class="p-3 bg-white rounded-2xl inline-block shadow-inner border border-slate-200">
             <img
               v-if="pagoData.qr_image_url || pagoData.qr_base64"
@@ -639,7 +664,7 @@
           </div>
         </div>
 
-        <div v-if="!pagoError" class="text-xs text-slate-500 space-y-1">
+        <div v-if="metodoPago === 'qr' && !pagoError" class="text-xs text-slate-500 space-y-1">
           <p class="font-mono font-bold text-slate-700 dark:text-slate-300">Ref: {{ pagoData.payment_number }}</p>
           <p class="text-[11px]">Escanee el código QR desde su aplicación bancaria o guárdelo para pagar después.</p>
           <!-- Aviso de Vigencia del QR y Botón para Renovar si expira -->
@@ -649,8 +674,8 @@
               <span>{{ pagoData.fecha_expiracion ? 'Válido hasta: ' + formatFecha(pagoData.fecha_expiracion) : 'QR con validez de sesión' }}</span>
             </p>
             <button
-              v-if="!loadingPago"
-              @click="solicitarNuevoQr(tramiteAPagar)"
+              v-if="!loadingPago && pagoData.fecha_expiracion && new Date(pagoData.fecha_expiracion) <= new Date()"
+              @click="generarQr(tramiteAPagar)"
               class="text-[11px] text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer inline-flex items-center space-x-1"
             >
               <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
@@ -661,8 +686,8 @@
 
         <div class="space-y-2 pt-2">
           <button
-            v-if="!pagoError"
-            @click="verificarPagoConPagoFacil"
+            v-if="metodoPago === 'qr' && !pagoError"
+            @click="verificarPago(tramiteAPagar.id)"
             :disabled="loadingPago || verificandoPago"
             class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs rounded-full shadow transition cursor-pointer flex items-center justify-center space-x-1.5"
           >
@@ -672,7 +697,7 @@
           </button>
           <button
             @click="modalPagoActivo = false"
-            :disabled="verificandoPago"
+            :disabled="verificandoPago || loadingPago"
             class="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-xs rounded-full transition cursor-pointer disabled:opacity-50"
           >
             Cerrar ventana (Pagar más tarde)
@@ -757,6 +782,7 @@
 </template>
 
 <script setup>
+import { paymentMethods, paymentStatuses, paymentStatus } from '../paymentLabels';
 import { ref, computed, onMounted, watch } from 'vue';
 import { state, actions } from '../stores/appState';
 import axios from 'axios';
@@ -847,6 +873,8 @@ function formatEstadoLegible(texto) {
 // Modal de Pago
 const modalPagoActivo = ref(false);
 const tramiteAPagar = ref({});
+const metodoPago = ref(null);
+const mensajeStripe = ref('');
 const pagoData = ref({});
 const pagoError = ref(null);
 
@@ -965,21 +993,51 @@ function descargarQrPago() {
   actions.toast('Código QR descargado. Puedes compartirlo o pagarlo desde tu galería bancaria.', 'success', 'QR Guardado');
 }
 
-async function abrirModalPago(t, forzarNuevo = false) {
-  if (loadingPago.value) return;
-  loadingPago.value = true;
+function abrirModalPago(t) {
   tramiteAPagar.value = t;
+  metodoPago.value = null;
+  mensajeStripe.value = '';
   pagoData.value = {};
   pagoError.value = null;
   modalPagoActivo.value = true;
+}
+
+function seleccionarStripe() {
+  metodoPago.value = 'stripe';
+  pagoError.value = null;
+}
+
+async function iniciarStripe() {
+  if (loadingPago.value) return;
+  loadingPago.value = true;
+  pagoError.value = null;
+  try {
+    const { data } = await axios.post(`/pagos/tramite/${tramiteAPagar.value.id}/stripe`);
+    if (data.pagado) {
+      await mostrarPagoConfirmado();
+    } else {
+      window.location.assign(data.url);
+    }
+  } catch (e) {
+    pagoError.value = e.response?.data?.message || 'No se pudo abrir Stripe Checkout.';
+  } finally {
+    loadingPago.value = false;
+  }
+}
+
+async function generarQr(t) {
+  if (loadingPago.value) return;
+  metodoPago.value = 'qr';
+  loadingPago.value = true;
+  pagoData.value = {};
+  pagoError.value = null;
 
   try {
-    // Configuración de timeout explícito para la petición del QR (15 segundos)
-    const res = await axios.post(`/api/pagos/tramite/${t.id}/generar-qr`, {
-      forzar_nuevo: forzarNuevo
-    }, {
-      timeout: 15000
-    });
+    const res = await axios.post(`/api/pagos/tramite/${t.id}/generar-qr`);
+    if (res.data.pagado) {
+      await mostrarPagoConfirmado();
+      return;
+    }
     pagoData.value = {
       ...res.data.pago,
       qr_image_url: res.data.qr_image_url,
@@ -998,26 +1056,51 @@ async function abrirModalPago(t, forzarNuevo = false) {
   }
 }
 
-function solicitarNuevoQr(t) {
-  abrirModalPago(t, true);
+async function mostrarPagoConfirmado() {
+  actions.toast('Pago confirmado y acreditado.', 'success', 'Pago acreditado');
+  modalPagoActivo.value = false;
+  await loadData();
 }
 
-async function verificarPagoConPagoFacil() {
+async function verificarPago(idTramite) {
   if (verificandoPago.value) return;
   verificandoPago.value = true;
   try {
-    const res = await axios.post(`/api/pagos/tramite/${tramiteAPagar.value.id}/verificar`);
-    if (res.data.pagado) {
-      actions.toast(res.data.message || 'Pago confirmado y acreditado con éxito en PagoFácil.', 'success', 'Pago Acreditado');
-      modalPagoActivo.value = false;
-      await loadData();
+    const { data } = await axios.post(`/api/pagos/tramite/${idTramite}/verificar`);
+    if (data.pagado) {
+      await mostrarPagoConfirmado();
     } else {
-      actions.toast(res.data.message || 'El pago aún figura como pendiente en PagoFácil.', 'warning', 'Pago Pendiente');
+      if (tramiteAPagar.value?.id === idTramite) {
+        tramiteAPagar.value.pago = data.pago;
+        if (data.pago.metodo_pago === 'STRIPE') mensajeStripe.value = data.message;
+      }
+      if (!modalPagoActivo.value || data.pago.metodo_pago !== 'STRIPE') {
+        actions.toast(data.message, 'warning', paymentStatuses[paymentStatus(data.pago)]);
+      }
     }
   } catch (e) {
-    actions.toast(e.response?.data?.message || 'Error al verificar estado de pago en PagoFácil', 'error', 'Error Pasarela');
+    actions.toast(e.response?.data?.message || 'No se pudo verificar el pago.', 'error', 'Error de pago');
   } finally {
     verificandoPago.value = false;
+  }
+}
+
+async function cancelarStripe() {
+  if (loadingPago.value || verificandoPago.value) return;
+  loadingPago.value = true;
+  pagoError.value = null;
+  try {
+    const { data } = await axios.post(`/pagos/tramite/${tramiteAPagar.value.id}/stripe/cancelar`);
+    if (data.pagado) {
+      await mostrarPagoConfirmado();
+    } else {
+      tramiteAPagar.value.pago = data.pago;
+      mensajeStripe.value = data.message;
+    }
+  } catch (e) {
+    pagoError.value = e.response?.data?.message || 'No se pudo cancelar el intento de Stripe.';
+  } finally {
+    loadingPago.value = false;
   }
 }
 
@@ -1103,7 +1186,28 @@ function getDocBadge(val) {
   }
 }
 
-onMounted(() => {
-  loadData();
+onMounted(async () => {
+  await loadData();
+  const url = new URL(window.location.href);
+  const idTramite = url.searchParams.get('pago_stripe');
+  if (!idTramite) return;
+
+  const cancelado = url.searchParams.has('stripe_cancelado');
+  url.searchParams.delete('pago_stripe');
+  url.searchParams.delete('stripe_cancelado');
+  window.history.replaceState(window.history.state, '', url);
+
+  const tramite = misTramites.value.find(t => String(t.id) === idTramite);
+  if (!tramite) return;
+
+  if (!isPagado(tramite)) {
+    abrirModalPago(tramite);
+    seleccionarStripe();
+  }
+
+  await verificarPago(tramite.id);
+  if (cancelado && modalPagoActivo.value && tramite.pago?.estado === 'PENDIENTE') {
+    mensajeStripe.value = 'Saliste de Stripe. Puedes continuar con el mismo intento o cancelarlo.';
+  }
 });
 </script>

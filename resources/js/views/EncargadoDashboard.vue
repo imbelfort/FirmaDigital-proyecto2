@@ -977,8 +977,8 @@ async function validarPagoEnVentanilla(t) {
   if (procesandoAccion.value) return;
   procesandoAccion.value = true;
   try {
-    await axios.post(`/api/pagos/tramite/${t.id}/confirmar`);
-    actions.toast(`Arancel del trámite ${t.codigo_tramite} validado con éxito.`, 'success', 'Pago Acreditado');
+    const { data } = await axios.post(`/api/pagos/tramite/${t.id}/confirmar`);
+    actions.toast(data.message, 'success', 'Arancel acreditado');
     await loadData();
   } catch (e) {
     actions.toast(e.response?.data?.message || 'Error al validar el pago en ventanilla.', 'error', 'Error Pago');

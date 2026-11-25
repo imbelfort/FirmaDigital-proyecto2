@@ -111,8 +111,8 @@
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div class="m3-card p-5 border border-slate-200 dark:border-slate-800 bg-gradient-to-tr from-emerald-50/60 to-teal-50/30 dark:from-emerald-950/20 dark:to-teal-950/10">
             <span class="text-xs font-semibold text-emerald-700 dark:text-emerald-300 block">Recaudación Total (Bs.)</span>
-            <p class="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1">Bs. {{ totalRecaudadoBs.toFixed(2) }}</p>
-            <span class="text-[11px] text-slate-500">Mediante PagoFácil QR</span>
+            <p class="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{{ formatoBs(totalRecaudadoBs) }}</p>
+            <span class="text-[11px] text-slate-500">Todos los medios de pago</span>
           </div>
           <div class="m3-card p-5 border border-slate-200 dark:border-slate-800">
             <span class="text-xs font-semibold text-slate-500 block">Transacciones Completadas</span>
@@ -120,12 +120,74 @@
             <span class="text-[11px] text-emerald-600 font-bold">Pagos Verificados</span>
           </div>
           <div class="m3-card p-5 border border-slate-200 dark:border-slate-800">
-            <span class="text-xs font-semibold text-amber-600 block">Pagos Pendientes</span>
+            <span class="text-xs font-semibold text-amber-600 block">Aranceles sin acreditar</span>
             <p class="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 mt-1">{{ totalPagosPendientes }}</p>
-            <span class="text-[11px] text-amber-600 font-bold">Pendientes de confirmación QR</span>
+            <span class="text-[11px] text-amber-600 font-bold">Incluye trámites sin intento de pago</span>
           </div>
         </div>
       </div>
+
+      <section class="m3-card p-5 border border-slate-200 dark:border-slate-800 space-y-5">
+        <h3 class="text-sm font-bold text-slate-900 dark:text-white">Recaudación por método</h3>
+        <div class="grid gap-3 sm:grid-cols-3">
+          <div v-for="medio in resumenMedios" :key="medio.id" class="rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-sm font-bold">{{ medio.nombre }}</span>
+              <span class="text-xs text-slate-500">{{ medio.acreditados }} acreditados</span>
+            </div>
+            <p class="mt-2 text-xl font-black text-emerald-600 dark:text-emerald-400">{{ formatoBs(medio.recaudado) }}</p>
+            <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700" aria-hidden="true">
+              <div class="h-full rounded-full bg-emerald-500" :style="{ width: (totalRecaudadoBs ? medio.recaudado / totalRecaudadoBs * 100 : 0) + '%' }"></div>
+            </div>
+            <p class="mt-2 text-xs text-slate-500">{{ medio.activos }} pendientes o procesando ? {{ medio.incidencias }} con incidencia</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <h3 class="text-sm font-bold text-slate-900 dark:text-white">Pagos de trámites <span class="text-xs font-normal text-slate-500">({{ pagosFiltrados.length }})</span></h3>
+          <div class="flex flex-wrap gap-2">
+            <select v-model="filtroMedioPago" aria-label="Método de pago" class="rounded-lg border border-slate-300 bg-transparent px-2 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900">
+              <option value="">Todos los métodos</option>
+              <option v-for="(nombre, id) in paymentMethods" :key="id" :value="id">{{ nombre }}</option>
+            </select>
+            <select v-model="filtroEstadoPago" aria-label="Estado del pago" class="rounded-lg border border-slate-300 bg-transparent px-2 py-1.5 text-xs dark:border-slate-700 dark:bg-slate-900">
+              <option value="">Todos los estados</option>
+              <option v-for="(nombre, id) in paymentStatuses" :key="id" :value="id">{{ nombre }}</option>
+            </select>
+          </div>
+        </div>
+        <div class="max-h-96 overflow-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="sticky top-0 bg-slate-50 text-slate-500 dark:bg-slate-800">
+              <tr>
+                <th scope="col" class="p-3">Trámite</th>
+                <th scope="col" class="p-3">Solicitante</th>
+                <th scope="col" class="p-3">Método</th>
+                <th scope="col" class="p-3">Estado</th>
+                <th scope="col" class="p-3 text-right">Monto</th>
+                <th scope="col" class="p-3">Fecha de pago</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+              <tr v-for="t in pagosFiltrados" :key="t.id">
+                <td class="p-3 font-mono whitespace-nowrap">{{ t.codigo_tramite }}</td>
+                <td class="p-3">{{ t.solicitante?.nombre }} {{ t.solicitante?.apellidos }}</td>
+                <td class="p-3 whitespace-nowrap">{{ paymentMethods[t.pago?.metodo_pago] || t.pago?.metodo_pago || '?' }}</td>
+                <td class="p-3">
+                  <span class="whitespace-nowrap rounded-full px-2 py-1 font-semibold" :class="claseEstadoPago(t.pago)">
+                    {{ paymentStatuses[paymentStatus(t.pago)] || paymentStatus(t.pago) }}
+                  </span>
+                </td>
+                <td class="p-3 text-right tabular-nums whitespace-nowrap">{{ formatoBs(t.pago?.monto ?? t.tipo_tramite?.costo_bs ?? 0) }}</td>
+                <td class="p-3 whitespace-nowrap">{{ t.pago?.fecha_pago ? new Date(t.pago.fecha_pago).toLocaleDateString('es-BO') : '?' }}</td>
+              </tr>
+              <tr v-if="!pagosFiltrados.length">
+                <td colspan="6" class="p-6 text-center text-slate-500">No hay pagos para estos filtros.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <!-- Distribución por Tipo de Trámite Oficial -->
       <div class="m3-card p-6 border border-slate-200 dark:border-slate-800 space-y-4">
@@ -756,6 +818,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { state, actions } from '../stores/appState';
 import axios from 'axios';
+import { paymentMethods, paymentStatuses, paymentStatus } from '../paymentLabels';
 import GraficosTramites from '../components/GraficosTramites.vue';
 
 const activeTab = ref('metricas');
@@ -837,16 +900,40 @@ const tramitesFinalizados = computed(() => tramites.value.filter(t => t.estado =
 const tramitesEnProceso = computed(() => tramites.value.filter(t => ['INICIADO', 'REQUISITOS_VALIDADOS', 'EXPEDIENTE_COMPILADO', 'EN_FIRMA'].includes(t.estado)).length);
 const tramitesObservados = computed(() => tramites.value.filter(t => t.estado === 'OBSERVADO').length);
 
-// Estadísticas de Pagos
-const pagosCompletadosList = computed(() => tramites.value.filter(t => t.pago && t.pago.estado === 'COMPLETADO'));
+const filtroMedioPago = ref('');
+const filtroEstadoPago = ref('');
+const monedaBs = new Intl.NumberFormat('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const formatoBs = (monto) => `Bs. ${monedaBs.format(Number(monto))}`;
+const estadosActivos = ['PENDIENTE', 'PROCESANDO'];
+
+const pagosCompletadosList = computed(() => tramites.value.filter(t => paymentStatus(t.pago) === 'COMPLETADO'));
 const totalPagosCompletados = computed(() => pagosCompletadosList.value.length);
-const totalPagosPendientes = computed(() => tramites.value.filter(t => !t.pago || t.pago.estado !== 'COMPLETADO').length);
-const totalRecaudadoBs = computed(() => {
-  return pagosCompletadosList.value.reduce((acc, t) => {
-    const m = t.pago?.monto ? Number(t.pago.monto) : (t.tipo_tramite ? Number(t.tipo_tramite.costo_bs) : 0);
-    return acc + m;
-  }, 0);
-});
+const totalPagosPendientes = computed(() => tramites.value.length - totalPagosCompletados.value);
+const totalRecaudadoBs = computed(() => pagosCompletadosList.value.reduce((total, t) => total + Number(t.pago.monto), 0));
+const resumenMedios = computed(() => Object.entries(paymentMethods).map(([id, nombre]) => {
+  const pagos = tramites.value.map(t => t.pago).filter(pago => pago?.metodo_pago === id);
+  const acreditados = pagos.filter(pago => paymentStatus(pago) === 'COMPLETADO');
+  const activos = pagos.filter(pago => estadosActivos.includes(paymentStatus(pago))).length;
+  return {
+    id,
+    nombre,
+    acreditados: acreditados.length,
+    activos,
+    incidencias: pagos.length - acreditados.length - activos,
+    recaudado: acreditados.reduce((total, pago) => total + Number(pago.monto), 0),
+  };
+}));
+const pagosFiltrados = computed(() => tramites.value.filter(t =>
+  (!filtroMedioPago.value || t.pago?.metodo_pago === filtroMedioPago.value)
+  && (!filtroEstadoPago.value || paymentStatus(t.pago) === filtroEstadoPago.value)
+));
+
+function claseEstadoPago(pago) {
+  const estado = paymentStatus(pago);
+  if (estado === 'COMPLETADO') return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300';
+  if (estadosActivos.includes(estado)) return 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300';
+  return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+}
 
 // Estadísticas y Monitoreo SLA
 const slaStats = computed(() => {

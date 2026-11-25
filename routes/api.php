@@ -51,8 +51,9 @@ Route::prefix('tramites')->group(function () {
     Route::post('/observaciones/{id}/subsanar', [TramiteController::class, 'subsanarObservacion']);
 });
 
-// Pagos (PagoFacil QR)
+// Pagos
 Route::prefix('pagos')->group(function () {
+    Route::post('/stripe/webhook', [PagoController::class, 'stripeWebhook']);
     Route::post('/tramite/{id}/generar-qr', [PagoController::class, 'generarQr']);
     Route::post('/tramite/{id}/verificar', [PagoController::class, 'verificarEstadoPago']);
     Route::post('/tramite/{id}/confirmar', [PagoController::class, 'confirmarPago']);
