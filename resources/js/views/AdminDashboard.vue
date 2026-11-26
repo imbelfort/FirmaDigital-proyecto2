@@ -677,6 +677,22 @@
           </div>
         </div>
 
+        <!-- Si el usuario que se edita es ALUMNO, permitir modificar su carrera -->
+        <div v-if="usuarioEnEdicion?.rol === 'ALUMNO'" class="p-3 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 rounded-2xl">
+          <label class="block text-xs font-bold text-blue-900 dark:text-blue-300 mb-1">Carrera Universitaria</label>
+          <select v-model="formEditar.carrera" class="w-full px-3 py-2 rounded-xl border border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200">
+            <option value="Ingenieria Informatica">Ingeniería Informática</option>
+            <option value="Ingenieria en Sistemas">Ingeniería en Sistemas</option>
+            <option value="Ingenieria en Redes y Telecomunicaciones">Ingeniería en Redes y Telecomunicaciones</option>
+            <option value="Ingenieria Comercial">Ingeniería Comercial</option>
+            <option value="Administracion de Empresas">Administración de Empresas</option>
+            <option value="Contaduria Publica">Contaduría Pública</option>
+            <option value="Derecho">Derecho</option>
+            <option value="Medicina">Medicina</option>
+            <option value="Arquitectura">Arquitectura</option>
+          </select>
+        </div>
+
         <p v-if="errorEdicion" class="text-xs font-semibold text-red-600 dark:text-red-400">
           {{ errorEdicion }}
         </p>
@@ -725,6 +741,30 @@
             <option value="ADMINISTRATIVO">ADMINISTRATIVO</option>
             <option value="VICERRECTOR">VICERRECTOR</option>
           </select>
+        </div>
+
+        <!-- Selector de Carrera (Solo visible si el rol es ALUMNO) -->
+        <div v-if="formUser.rol === 'ALUMNO'" class="space-y-2 p-3 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 rounded-2xl">
+          <label class="block text-xs font-bold text-blue-900 dark:text-blue-300">
+            Carrera Universitaria
+          </label>
+          <select v-model="formUser.carrera" class="w-full px-3 py-2 rounded-xl border border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200">
+            <option value="Ingenieria Informatica">Ingeniería Informática</option>
+            <option value="Ingenieria en Sistemas">Ingeniería en Sistemas</option>
+            <option value="Ingenieria en Redes y Telecomunicaciones">Ingeniería en Redes y Telecomunicaciones</option>
+            <option value="Ingenieria Comercial">Ingeniería Comercial</option>
+            <option value="Administracion de Empresas">Administración de Empresas</option>
+            <option value="Contaduria Publica">Contaduría Pública</option>
+            <option value="Derecho">Derecho</option>
+            <option value="Medicina">Medicina</option>
+            <option value="Arquitectura">Arquitectura</option>
+          </select>
+        </div>
+
+        <!-- Selector de Unidad Académica / Facultad (Para otros roles o información general) -->
+        <div v-else>
+          <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Facultad / Unidad Académica</label>
+          <input v-model="formUser.unidad_academica" type="text" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs" placeholder="Ej: Facultad de Ingenieria en Ciencias de la Computacion" />
         </div>
 
         <div class="flex justify-end space-x-2 pt-4">
@@ -893,12 +933,13 @@ const rankingsAuditoria = computed(() => [
 
 // Modal y Edición de Usuario
 const modalEditarUsuario = ref(false);
-const formEditar = ref({ id_usuario: null, nombre: '', apellidos: '', email: '', telefono: '', estado: 'ACTIVO' });
+const usuarioEnEdicion = ref(null);
+const formEditar = ref({ id_usuario: null, nombre: '', apellidos: '', email: '', telefono: '', estado: 'ACTIVO', carrera: '' });
 const errorEdicion = ref('');
 
 // Modal Nuevo Usuario
 const modalNuevoUsuario = ref(false);
-const formUser = ref({ nombre: '', apellidos: '', registro: '', ci: '', email: '', rol: 'ALUMNO' });
+const formUser = ref({ nombre: '', apellidos: '', registro: '', ci: '', email: '', rol: 'ALUMNO', carrera: 'Ingenieria Informatica', unidad_academica: '' });
 
 // Verificación de si la fila es el mismo Admin en sesión
 function esMismoUsuario(u) {
@@ -1078,12 +1119,31 @@ async function cargarAuditoria() {
 }
 
 function abrirModalCrearUsuario() {
-  formUser.value = { nombre: '', apellidos: '', registro: '', ci: '', email: '', rol: 'ALUMNO' };
+  formUser.value = {
+    nombre: '',
+    apellidos: '',
+    registro: '',
+    ci: '',
+    email: '',
+    rol: 'ALUMNO',
+    carrera: 'Ingenieria Informatica',
+    unidad_academica: 'Facultad de Ingenieria en Ciencias de la Computacion'
+  };
   modalNuevoUsuario.value = true;
 }
 
 async function guardarUsuario() {
   try {
+    // Si es ALUMNO, asignar facultad por defecto acorde o unidad académica
+    if (formUser.value.rol === 'ALUMNO' && !formUser.value.unidad_academica) {
+      if (['Ingenieria Informatica', 'Ingenieria en Sistemas', 'Ingenieria en Redes y Telecomunicaciones'].includes(formUser.value.carrera)) {
+        formUser.value.unidad_academica = 'Facultad de Ingenieria en Ciencias de la Computacion';
+      } else if (['Ingenieria Comercial', 'Administracion de Empresas', 'Contaduria Publica'].includes(formUser.value.carrera)) {
+        formUser.value.unidad_academica = 'Facultad de Ciencias Economicas';
+      } else {
+        formUser.value.unidad_academica = 'UAGRM';
+      }
+    }
     await axios.post('/api/usuarios', formUser.value);
     modalNuevoUsuario.value = false;
     actions.toast(`Usuario ${formUser.value.nombre} ${formUser.value.apellidos} creado exitosamente.`, 'success', 'Usuario Creado');
@@ -1095,6 +1155,7 @@ async function guardarUsuario() {
 
 function abrirEditarUsuario(u) {
   if (esMismoUsuario(u)) return;
+  usuarioEnEdicion.value = u;
   formEditar.value = {
     id_usuario: u.id_usuario,
     nombre: u.nombre,
@@ -1102,6 +1163,7 @@ function abrirEditarUsuario(u) {
     email: u.email,
     telefono: u.telefono || '',
     estado: u.estado,
+    carrera: u.alumno?.carrera || 'Ingenieria Informatica',
   };
   errorEdicion.value = '';
   modalEditarUsuario.value = true;

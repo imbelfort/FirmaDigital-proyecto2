@@ -739,6 +739,22 @@
           </select>
         </div>
 
+        <!-- Selector de Carrera si el usuario es ALUMNO -->
+        <div v-if="formUser.rol === 'ALUMNO'" class="space-y-1 p-3 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 rounded-2xl">
+          <label class="block text-xs font-bold text-blue-900 dark:text-blue-300">Carrera Universitaria</label>
+          <select v-model="formUser.carrera" class="w-full px-3 py-2 rounded-xl border border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-slate-200">
+            <option value="Ingenieria Informatica">Ingeniería Informática</option>
+            <option value="Ingenieria en Sistemas">Ingeniería en Sistemas</option>
+            <option value="Ingenieria en Redes y Telecomunicaciones">Ingeniería en Redes y Telecomunicaciones</option>
+            <option value="Ingenieria Comercial">Ingeniería Comercial</option>
+            <option value="Administracion de Empresas">Administración de Empresas</option>
+            <option value="Contaduria Publica">Contaduría Pública</option>
+            <option value="Derecho">Derecho</option>
+            <option value="Medicina">Medicina</option>
+            <option value="Arquitectura">Arquitectura</option>
+          </select>
+        </div>
+
         <div class="flex justify-end space-x-2 pt-4">
           <button @click="modalNuevoUsuario = false" class="px-4 py-2 text-xs font-semibold text-slate-500 cursor-pointer">Cancelar</button>
           <button @click="guardarUsuario" class="px-5 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow cursor-pointer">Crear Usuario</button>
@@ -958,6 +974,7 @@ const formUser = ref({
   ci: '',
   email: '',
   rol: 'ALUMNO',
+  carrera: 'Ingenieria Informatica',
 });
 
 const tramitesFirmados = computed(() => {
