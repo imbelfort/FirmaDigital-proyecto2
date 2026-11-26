@@ -49,7 +49,7 @@ const rutaAdjunto = computed(() => (adjuntoSeleccionado.value?.archivo_url ?? ''
 const adjuntoEsImagen = computed(() => /\.(?:png|jpe?g)$/i.test(rutaAdjunto.value));
 const archivoLocal = computed(() => {
   return /(?:^|\/)storage\/expedientes\/[a-z0-9_-]+\.(?:pdf|png|jpe?g)$/i.test(rutaAdjunto.value)
-    ? `/api/documentos/${adjuntoSeleccionado.value.id}/archivo`
+    ? axios.getUri({ url: `/api/documentos/${adjuntoSeleccionado.value.id}/archivo` })
     : null;
 });
 
