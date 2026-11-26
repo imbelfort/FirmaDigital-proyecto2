@@ -80,7 +80,7 @@
             @click="fillDemo('1000', '1111111')"
             class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-left transition cursor-pointer border border-slate-200/60 dark:border-slate-700"
           >
-            <span class="font-bold text-red-600 dark:text-red-400 block">Admin General</span>
+            <span class="font-bold text-red-600 dark:text-red-400 block">Supervisor de Sistemas</span>
             <span class="text-[10px] text-slate-500 font-mono">1000</span>
           </button>
           <button
