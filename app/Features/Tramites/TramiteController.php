@@ -19,7 +19,7 @@ class TramiteController
     {
         $query = Tramite::with([
             'solicitante',
-            'tipoTramite',
+            'tipoTramite.requisitos',
             'pago',
             'documentos',
             'flujos.responsable',
@@ -257,6 +257,16 @@ class TramiteController
 
         return DB::transaction(function () use ($id, $request) {
             $tramite = Tramite::lockForUpdate()->findOrFail($id);
+            if ($request->nuevo_estado_tramite === 'REQUISITOS_VALIDADOS') {
+                abort_unless(in_array($tramite->estado, ['INICIADO', 'OBSERVADO'], true), 422, 'La revisión de requisitos ya está cerrada.');
+            }
+            $adjuntosBloqueantes = $tramite->documentos()
+                ->where(fn ($query) => $query->where('estado_validacion', 'OBSERVADO')
+                    ->orWhere(fn ($pendiente) => $pendiente->where('estado_validacion', 'PENDIENTE')
+                        ->whereNotNull('observacion_validacion')))
+                ->exists();
+            abort_if($adjuntosBloqueantes, 422, 'Hay adjuntos observados o correcciones pendientes de aprobación.');
+
             // Cerrar etapa previa
             FlujoTramite::where('id_tramite', $tramite->id)
                 ->where('estado_etapa', 'EN_PROCESO')
@@ -305,7 +315,13 @@ class TramiteController
             'descripcion' => 'required|string',
         ]);
 
-        $tramite = Tramite::findOrFail($id);
+        return DB::transaction(fn () => $this->registrarObservacion($request, $id));
+    }
+
+    private function registrarObservacion(Request $request, $id)
+    {
+        $tramite = Tramite::lockForUpdate()->findOrFail($id);
+        abort_unless($tramite->estado === 'INICIADO', 422, 'Solo se puede observar un trámite en estado Iniciado.');
         $tramite->estado = 'OBSERVADO';
         $tramite->save();
 

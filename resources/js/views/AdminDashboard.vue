@@ -179,7 +179,7 @@
                   </span>
                 </td>
                 <td class="p-3 text-right tabular-nums whitespace-nowrap">{{ formatoBs(t.pago?.monto ?? t.tipo_tramite?.costo_bs ?? 0) }}</td>
-                <td class="p-3 whitespace-nowrap">{{ t.pago?.fecha_pago ? new Date(t.pago.fecha_pago).toLocaleDateString('es-BO') : '?' }}</td>
+                <td class="p-3 whitespace-nowrap">{{ formatFecha(t.pago?.fecha_pago) || '?' }}</td>
               </tr>
               <tr v-if="!pagosFiltrados.length">
                 <td colspan="6" class="p-6 text-center text-slate-500">No hay pagos para estos filtros.</td>
@@ -607,7 +607,7 @@
               <tr v-for="log in auditoriaLogs" :key="log.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                 <td class="p-3 font-mono text-[11px] text-slate-500">
                   <span class="font-bold text-slate-700 dark:text-slate-300">#{{ log.id }}</span>
-                  <br />{{ log.fecha_evento }}
+                  <br />{{ formatFecha(log.fecha_evento) }}
                 </td>
                 <td class="p-3">
                   <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" :class="getBadgeAuditoria(log.tipo_evento)">
@@ -866,6 +866,7 @@
 </template>
 
 <script setup>
+import { formatFecha } from '../fechas';
 import { ref, computed, onMounted } from 'vue';
 import { state, actions } from '../stores/appState';
 import axios from 'axios';

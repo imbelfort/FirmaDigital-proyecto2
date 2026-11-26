@@ -13,8 +13,10 @@ class BusquedaGlobalController
     public function search(Request $request)
     {
         $q = trim($request->input('q', ''));
-        $usuarioId = $request->input('usuario_id') ?? session('usuario')->id_usuario ?? null;
-        $usuarioActual = $usuarioId ? Usuario::find($usuarioId) : null;
+        $usuarioActual = $request->session()->get('usuario');
+        if (!$usuarioActual || (int) $request->session()->get('usuario_autenticado_id') !== (int) $usuarioActual->id_usuario) {
+            $usuarioActual = null;
+        }
         $esAlumno = $usuarioActual && $usuarioActual->rol === 'ALUMNO';
 
         if (strlen($q) < 2) {
@@ -44,7 +46,7 @@ class BusquedaGlobalController
         ];
 
         // Solo personal/administrador ve accesos a monitoreo SLA
-        if (!$esAlumno) {
+        if ($usuarioActual && !$esAlumno) {
             $accionesSistema = array_merge($accionesSistema, [
                 ['titulo' => 'Monitoreo de Tiempos y Alertas SLA (72h)', 'categoria' => 'Monitoreo', 'tipo' => 'RUTA_REPORTES', 'icono' => 'Clock', 'keywords' => 'sla 72 horas demoras alertas tiempo reportes metricas'],
             ]);
@@ -85,24 +87,29 @@ class BusquedaGlobalController
                       });
             });
 
-        if ($esAlumno) {
+        if (!$usuarioActual) {
+            $tramitesQuery->whereRaw('1 = 0');
+        } elseif ($esAlumno) {
             $tramitesQuery->where('id_usuario_solicitante', $usuarioActual->id_usuario);
         } else {
             // El personal administrativo sí puede buscar por nombre o registro del solicitante
             $tramitesQuery->orWhereHas('solicitante', function ($sub) use ($q) {
                 $sub->where('nombre', 'ilike', "%{$q}%")
                     ->orWhere('apellidos', 'ilike', "%{$q}%")
+                    ->orWhereRaw("concat_ws(' ', nombre, apellidos) ilike ?", ["%{$q}%"])
                     ->orWhere('registro', 'ilike', "%{$q}%")
                     ->orWhere('ci', 'ilike', "%{$q}%");
             });
         }
 
-        $tramites = $tramitesQuery->limit(10)->get();
+        $tramites = $tramitesQuery
+            ->orderByRaw('CASE WHEN upper(codigo_tramite) = upper(?) THEN 0 ELSE 1 END', [$q])
+            ->orderByDesc('id')->limit(10)->get();
 
         // 4. Usuarios (Alumnos, Docentes, Encargados)
         // PRIVACIDAD ESTRICTA: Un alumno NO tiene permiso de consultar personas ni registros ajenos.
         $usuarios = [];
-        if (!$esAlumno) {
+        if ($usuarioActual && !$esAlumno) {
             $usuarios = Usuario::with(['tramites' => function ($t) {
                     $t->with('tipoTramite')->orderBy('id', 'desc')->limit(3);
                 }])
@@ -125,7 +132,9 @@ class BusquedaGlobalController
                       ->orWhere('titulo_documento', 'ilike', "%{$q}%");
             });
 
-        if ($esAlumno) {
+        if (!$usuarioActual) {
+            $certificadosQuery->whereRaw('1 = 0');
+        } elseif ($esAlumno) {
             $certificadosQuery->whereHas('tramite', function ($t) use ($usuarioActual) {
                 $t->where('id_usuario_solicitante', $usuarioActual->id_usuario);
             });

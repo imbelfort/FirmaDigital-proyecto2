@@ -27,22 +27,16 @@ class ReporteController
             ->orderBy('estado')
             ->get();
 
-        $primerMes = now()->startOfMonth()->subMonths(5);
+        $primerMes = now('America/La_Paz')->startOfMonth()->subMonths(5);
         $finPeriodo = $primerMes->copy()->addMonths(6);
-        $solicitudesPorDia = Tramite::query()
-            ->where('fecha_solicitud', '>=', $primerMes)
-            ->where('fecha_solicitud', '<', $finPeriodo)
-            ->selectRaw('DATE(fecha_solicitud) as dia, COUNT(*) as total')
-            ->groupByRaw('DATE(fecha_solicitud)')
-            ->get();
-
-        $totalesPorMes = $solicitudesPorDia->groupBy(fn ($fila) => substr($fila->dia, 0, 7));
         $tramitesPorMes = [];
         for ($mes = $primerMes->copy(); $mes < $finPeriodo; $mes->addMonth()) {
-            $periodo = $mes->format('Y-m');
             $tramitesPorMes[] = [
-                'mes' => $periodo,
-                'total' => $totalesPorMes->get($periodo, collect())->sum('total'),
+                'mes' => $mes->format('Y-m'),
+                'total' => Tramite::query()
+                    ->where('fecha_solicitud', '>=', $mes->copy()->utc())
+                    ->where('fecha_solicitud', '<', $mes->copy()->addMonth()->utc())
+                    ->count(),
             ];
         }
 

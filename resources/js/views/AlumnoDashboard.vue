@@ -284,62 +284,80 @@
             </div>
           </div>
 
-          <!-- Documentos del Expediente (Solo se habilita adjuntar si el trámite requiere recaudos y está en RECEPCION/INICIADO o en OBSERVADO para subsanar) -->
-          <div v-if="t.tipo_tramite && t.tipo_tramite.requisitos && t.tipo_tramite.requisitos.length > 0" class="pt-2 border-t border-slate-100 dark:border-slate-800">
+          <section v-if="t.estado === 'OBSERVADO' || observacionesAbiertas(t).length"
+                   class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+            <h4 class="font-bold">Observaciones del Encargado</h4>
+            <ul v-if="observacionesAbiertas(t).length" class="mt-2 space-y-2">
+              <li v-for="obs in observacionesAbiertas(t)" :key="obs.id">
+                <p class="font-semibold">{{ formatEstadoLegible(obs.tipo_observacion) }}</p>
+                <p class="whitespace-pre-wrap break-words">{{ obs.descripcion }}</p>
+              </li>
+            </ul>
+            <p v-else-if="!t.documentos?.some(doc => doc.estado_validacion === 'OBSERVADO' || (doc.estado_validacion === 'PENDIENTE' && doc.observacion_validacion))" class="mt-1">
+              No hay un motivo registrado para este trámite.
+            </p>
+          </section>
+
+          <div v-if="t.tipo_tramite?.requisitos?.length || t.documentos?.length" class="pt-2 border-t border-slate-100 dark:border-slate-800">
             <div class="flex items-center justify-between text-xs mb-2">
               <span class="font-bold text-slate-700 dark:text-slate-300">
                 Expediente Digital ({{ t.documentos ? t.documentos.length : 0 }} recaudos)
               </span>
-              <!-- Botón condicional según etapa y estado procesal -->
-              <button
-                v-if="puedeAdjuntar(t)"
-                @click="openSubirDoc(t)"
-                class="px-2.5 py-1 rounded-full text-xs font-bold transition flex items-center space-x-1 cursor-pointer"
-                :class="t.estado === 'OBSERVADO' ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 hover:bg-amber-200' : 'bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 hover:bg-blue-100'"
-              >
-                <span>{{ t.estado === 'OBSERVADO' ? 'Subsanar / Reemplazar Recaudo' : '+ Adjuntar Recaudo' }}</span>
-              </button>
-              <span v-else class="text-[10px] text-slate-400 italic">
+              <span v-if="!puedeAdjuntar(t)" class="text-[10px] text-slate-400 italic">
                 {{ getMotivoBloqueoAdjunto(t) }}
               </span>
             </div>
 
-            <!-- Alerta informativa si está observado -->
-            <div v-if="t.estado === 'OBSERVADO'" class="p-2.5 mb-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-[11px] text-amber-900 dark:text-amber-200 flex items-start space-x-2">
-              <svg class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-              <div>
-                <p class="font-bold">El expediente tiene observaciones del Encargado.</p>
-                <p v-if="puedeAdjuntar(t)">Adjunta el documento corregido para subsanar el requisito observado.</p>
-                <p v-else>Consulta el seguimiento detallado para ver qué observó el encargado.</p>
-              </div>
-            </div>
-
-            <div class="space-y-1.5 max-h-36 overflow-y-auto">
-              <div
-                v-for="doc in t.documentos"
-                :key="doc.id"
-                class="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs"
-              >
-                <div class="truncate max-w-[200px]">
-                  <span class="font-medium text-slate-700 dark:text-slate-200 block truncate">{{ doc.nombre_documento }}</span>
-                  <span class="font-mono text-[10px] text-slate-400 truncate block">Hash: {{ doc.hash_documento ? doc.hash_documento.substring(0, 16) + '...' : 'Generado' }}</span>
-                </div>
-                <div class="flex items-center space-x-1.5">
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" :class="getDocBadge(doc.estado_validacion)">
-                    {{ formatEstadoLegible(doc.estado_validacion) }}
-                  </span>
-                  <!-- Botón directo de corregir si este documento específico fue observado -->
-                  <button
-                    v-if="doc.estado_validacion === 'OBSERVADO' && puedeAdjuntar(t)"
-                    @click="corregirDocObservado(t, doc)"
-                    class="px-2 py-0.5 text-[10px] font-bold bg-amber-600 hover:bg-amber-700 text-white rounded cursor-pointer"
-                    title="Subir archivo corregido para este documento"
-                  >
-                    Corregir
+            <ul class="space-y-2">
+              <li v-for="{ requisito, documentos } in agruparExpediente(t)" :key="requisito?.id ?? 'sin-requisito'"
+                  class="space-y-2 rounded-xl border border-slate-200 dark:border-slate-700 p-2.5 text-xs">
+                <div v-if="requisito" class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="font-semibold text-slate-700 dark:text-slate-200">{{ requisito.nombre }}</p>
+                    <p v-if="requisito.descripcion" class="text-slate-500">{{ requisito.descripcion }}</p>
+                    <p class="text-slate-500">{{ requisito.es_obligatorio ? 'Obligatorio' : 'Opcional' }} · {{ requisito.formato_permitido || 'PDF' }}</p>
+                  </div>
+                  <button v-if="!documentos.length && puedeAdjuntar(t)" type="button" @click="openSubirDoc(t, requisito)"
+                        class="shrink-0 px-2.5 py-1 rounded-full font-bold bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 hover:bg-blue-100 cursor-pointer">
+                    Adjuntar archivo
                   </button>
+                  <span v-else-if="!documentos.length" class="text-slate-500">Sin adjunto</span>
                 </div>
-              </div>
-            </div>
+                <p v-else class="font-semibold text-slate-700 dark:text-slate-200">Adjuntos sin requisito asociado</p>
+                <div
+                  v-for="doc in documentos"
+                  :key="doc.id"
+                  class="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs"
+                >
+                  <div class="min-w-0">
+                    <span v-if="doc.nombre_documento !== requisito?.nombre" class="font-medium text-slate-700 dark:text-slate-200 block break-words">{{ doc.nombre_documento }}</span>
+                    <span class="font-mono text-[10px] text-slate-400 truncate block">Hash: {{ doc.hash_documento ? doc.hash_documento.substring(0, 16) + '...' : 'Generado' }}</span>
+                  </div>
+                  <div class="flex flex-wrap items-center justify-end gap-1.5">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" :class="getDocBadge(doc.estado_validacion)">
+                      {{ doc.estado_validacion === 'PENDIENTE' && doc.observacion_validacion ? 'Corrección en revisión' : formatEstadoLegible(doc.estado_validacion) }}
+                    </span>
+                    <button v-if="doc.archivo_url" type="button"
+                            @click="modalAdjuntos.abrir({ codigo_tramite: t.codigo_tramite, documentos: [doc] })"
+                            class="px-2 py-0.5 text-[10px] font-bold text-blue-700 dark:text-blue-300 hover:underline cursor-pointer">
+                      Ver archivo
+                    </button>
+                    <button
+                      v-if="doc.estado_validacion === 'OBSERVADO' && ['INICIADO', 'OBSERVADO', 'REQUISITOS_VALIDADOS', 'EXPEDIENTE_COMPILADO'].includes(t.estado)"
+                      @click="corregirDocObservado(t, doc)"
+                      class="px-2 py-0.5 text-[10px] font-bold bg-amber-600 hover:bg-amber-700 text-white rounded cursor-pointer"
+                      title="Subir archivo corregido para este documento"
+                    >
+                      Subir corrección
+                    </button>
+                  </div>
+                  <div v-if="doc.estado_validacion === 'OBSERVADO'" class="col-span-2 text-amber-800 dark:text-amber-300">
+                    <p v-if="motivosObservacion[doc.tipo_observacion]" class="font-semibold">{{ motivosObservacion[doc.tipo_observacion] }}</p>
+                    <p class="whitespace-pre-wrap break-words">{{ doc.observacion_validacion || 'No hay un motivo registrado para este documento.' }}</p>
+                  </div>
+                </div>
+              </li>
+            </ul>
           </div>
           <!-- Si el trámite no requiere recaudos -->
           <div v-else class="pt-2 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 italic">
@@ -710,7 +728,7 @@
               <span>{{ pagoData.fecha_expiracion ? 'Válido hasta: ' + formatFecha(pagoData.fecha_expiracion) : 'QR con validez de sesión' }}</span>
             </p>
             <button
-              v-if="!loadingPago && pagoData.fecha_expiracion && new Date(pagoData.fecha_expiracion) <= new Date()"
+              v-if="!loadingPago && pagoData.fecha_expiracion && parseFechaApi(pagoData.fecha_expiracion) <= new Date()"
               @click="generarQr(tramiteAPagar)"
               class="text-[11px] text-blue-600 dark:text-blue-400 hover:underline font-semibold cursor-pointer inline-flex items-center space-x-1"
             >
@@ -743,10 +761,12 @@
     </div>
 
     <!-- Modal Adjuntar Documento con Selector de Archivo Real o URL -->
+    <ModalAdjuntos ref="modalAdjuntos" :formato-estado="formatEstadoLegible" />
+
     <div v-if="modalAdjuntar" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
       <div class="m3-card p-6 sm:p-8 max-w-md w-full space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl">
         <div class="flex items-center justify-between">
-          <h3 class="text-lg font-bold text-slate-900 dark:text-white">Adjuntar Archivo al Expediente</h3>
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white">{{ formDoc.id_documento_observado ? 'Subir corrección' : 'Adjuntar Archivo al Expediente' }}</h3>
           <span class="text-xs font-mono text-blue-600 dark:text-blue-400 font-bold">{{ selectedTramite ? selectedTramite.codigo_tramite : '' }}</span>
         </div>
 
@@ -754,6 +774,7 @@
           <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Nombre o Tipo del Documento</label>
           <input
             v-model="formDoc.nombre_documento"
+            :readonly="Boolean(formDoc.id_documento_observado)"
             type="text"
             class="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm"
             placeholder="Ej: Fotocopia de Cédula de Identidad o Certificado"
@@ -779,7 +800,7 @@
 
         <div class="flex justify-end space-x-2 pt-4">
           <button @click="cerrarModalAdjuntar" :disabled="subiendoDoc" class="px-4 py-2 text-xs font-semibold text-slate-500 cursor-pointer disabled:opacity-50">Cancelar</button>
-          <button @click="guardarDocumento" :disabled="subiendoDoc || !formDoc.nombre_documento" class="px-5 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow cursor-pointer disabled:opacity-50 flex items-center space-x-1">
+          <button @click="guardarDocumento" :disabled="subiendoDoc || !formDoc.nombre_documento || !archivoSeleccionado" class="px-5 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow cursor-pointer disabled:opacity-50 flex items-center space-x-1">
             <svg v-if="subiendoDoc" class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
             <span>{{ subiendoDoc ? 'Subiendo y computando hash...' : 'Subir Archivo' }}</span>
           </button>
@@ -818,10 +839,13 @@
 </template>
 
 <script setup>
+import { formatFecha, parseFechaApi } from '../fechas';
 import { paymentMethods, paymentStatuses, paymentStatus } from '../paymentLabels';
 import { ref, computed, onMounted, watch } from 'vue';
 import { state, actions } from '../stores/appState';
 import axios from 'axios';
+import ModalAdjuntos from '../components/ModalAdjuntos.vue';
+import { motivosObservacion } from '../motivosObservacion';
 import SkeletonLoader from '../components/SkeletonLoader.vue';
 
 const activeSubTab = ref('mis_tramites');
@@ -961,17 +985,20 @@ const mensajeStripe = ref('');
 const pagoData = ref({});
 const pagoError = ref(null);
 
+const modalAdjuntos = ref(null);
 const modalAdjuntar = ref(false);
 const selectedTramite = ref(null);
 const formDoc = ref({
   nombre_documento: '',
+  id_requisito: null,
+  id_documento_observado: null,
 });
 const archivoSeleccionado = ref(null);
 
 function onFileSelected(event) {
   const file = event.target.files[0];
+  archivoSeleccionado.value = file ?? null;
   if (file) {
-    archivoSeleccionado.value = file;
     if (!formDoc.value.nombre_documento) {
       // Usar el nombre del archivo sin extensión por defecto
       formDoc.value.nombre_documento = file.name.replace(/\.[^/.]+$/, "");
@@ -983,14 +1010,11 @@ function cerrarModalAdjuntar() {
   modalAdjuntar.value = false;
   archivoSeleccionado.value = null;
   formDoc.value.nombre_documento = '';
+  formDoc.value.id_requisito = null;
+  formDoc.value.id_documento_observado = null;
 }
 
 const certModalData = ref(null);
-
-function formatFecha(f) {
-  if (!f) return '';
-  return new Date(f).toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
 
 function isPagado(t) {
   return t.pago && t.pago.estado === 'COMPLETADO';
@@ -1205,30 +1229,50 @@ function getMotivoBloqueoAdjunto(t) {
   return 'Expediente no modificable';
 }
 
-function corregirDocObservado(t, doc) {
-  selectedTramite.value = t;
-  formDoc.value.nombre_documento = doc.nombre_documento + ' (Subsanado)';
-  archivoSeleccionado.value = null;
-  modalAdjuntar.value = true;
+function observacionesAbiertas(tramite) {
+  return tramite.observaciones?.filter(obs => obs.estado === 'ABIERTA') ?? [];
 }
 
-function openSubirDoc(t) {
+function corregirDocObservado(t, doc) {
+  openSubirDoc(t, { id: doc.id_requisito, nombre: doc.nombre_documento });
+  formDoc.value.id_documento_observado = doc.id;
+}
+
+function agruparExpediente(tramite) {
+  const grupos = (tramite.tipo_tramite?.requisitos ?? []).map(requisito => ({ requisito, documentos: [] }));
+  const porRequisito = new Map(grupos.map(grupo => [String(grupo.requisito.id), grupo.documentos]));
+  const sinRequisito = [];
+  for (const doc of tramite.documentos ?? []) {
+    const documentos = porRequisito.get(String(doc.id_requisito)) ?? sinRequisito;
+    documentos.push(doc);
+  }
+  if (sinRequisito.length) grupos.push({ requisito: null, documentos: sinRequisito });
+  return grupos;
+}
+
+function openSubirDoc(t, requisito) {
   selectedTramite.value = t;
-  formDoc.value.nombre_documento = '';
+  formDoc.value.nombre_documento = requisito.nombre;
+  formDoc.value.id_requisito = requisito.id;
+  formDoc.value.id_documento_observado = null;
   archivoSeleccionado.value = null;
   modalAdjuntar.value = true;
 }
 
 async function guardarDocumento() {
-  if (!formDoc.value.nombre_documento || subiendoDoc.value) return;
+  if (!formDoc.value.nombre_documento || !archivoSeleccionado.value || subiendoDoc.value) return;
   subiendoDoc.value = true;
   try {
     const formData = new FormData();
     formData.append('id_tramite', selectedTramite.value.id);
     formData.append('nombre_documento', formDoc.value.nombre_documento);
-    if (archivoSeleccionado.value) {
-      formData.append('archivo', archivoSeleccionado.value);
+    if (formDoc.value.id_requisito != null) {
+      formData.append('id_requisito', formDoc.value.id_requisito);
     }
+    if (formDoc.value.id_documento_observado != null) {
+      formData.append('id_documento_observado', formDoc.value.id_documento_observado);
+    }
+    formData.append('archivo', archivoSeleccionado.value);
 
     await axios.post('/api/documentos', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }

@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class DocumentoExpediente extends Model
 {
+    public const TIPOS_OBSERVACION = ['DOCUMENTO_ILEGIBLE', 'DOCUMENTO_INCOMPLETO', 'DOCUMENTO_INCORRECTO', 'ERROR_DATOS', 'OTRO'];
+
     protected $table = 'documento_expediente';
     public $timestamps = false;
 

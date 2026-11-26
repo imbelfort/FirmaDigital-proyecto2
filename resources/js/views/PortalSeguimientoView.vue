@@ -162,6 +162,7 @@
 </template>
 
 <script setup>
+import { formatFecha } from '../fechas';
 import { ref } from 'vue';
 import axios from 'axios';
 import { actions } from '../stores/appState';
@@ -209,11 +210,6 @@ function getPorcentaje(estado) {
 function formatEstadoLegible(texto) {
   if (!texto) return '';
   return texto.split('_').map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
-}
-
-function formatFecha(f) {
-  if (!f) return '';
-  return new Date(f).toLocaleDateString('es-BO', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 function getEstadoBadge(estado) {

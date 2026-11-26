@@ -14,7 +14,7 @@
           @input="handleInput"
           type="text"
           class="w-full bg-transparent text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none text-base sm:text-lg"
-          placeholder="Buscar trámites, personas, opciones del sistema, certificados..."
+          placeholder="Buscar por código de trámite, registro o nombre..."
         />
         <button @click="actions.closeGlobalSearch()" class="p-1 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-white">
           <kbd class="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">ESC</kbd>
@@ -215,10 +215,14 @@ const results = ref({
 });
 
 let debounceTimer = null;
+let busquedaActiva = 0;
 
 function handleInput() {
   clearTimeout(debounceTimer);
-  if (query.value.trim().length < 2) {
+  const version = ++busquedaActiva;
+  const termino = query.value.trim();
+  if (termino.length < 2) {
+    loading.value = false;
     results.value = { acciones_sistema: [], tipos_tramite: [], tramites: [], usuarios: [], certificados: [] };
     return;
   }
@@ -226,16 +230,16 @@ function handleInput() {
   debounceTimer = setTimeout(async () => {
     try {
       const res = await axios.get('/api/search', {
-        params: {
-          q: query.value,
-          usuario_id: state.user?.id_usuario
-        }
+        params: { q: termino }
       });
-      results.value = res.data.results;
+      if (version === busquedaActiva) results.value = res.data.results;
     } catch (e) {
-      console.error(e);
+      if (version === busquedaActiva) {
+        results.value = { acciones_sistema: [], tipos_tramite: [], tramites: [], usuarios: [], certificados: [] };
+        actions.toast('No se pudo completar la búsqueda.', 'error');
+      }
     } finally {
-      loading.value = false;
+      if (version === busquedaActiva) loading.value = false;
     }
   }, 200);
 }
@@ -300,6 +304,11 @@ function seleccionarTipoTramite(tipo) {
 
 function selectTramite(tr) {
   actions.closeGlobalSearch();
+  if (state.user?.rol === 'ENCARGADO') {
+    state.tramiteParaUbicar = tr.codigo_tramite;
+    actions.setActiveTab('dashboard');
+    return;
+  }
   actions.setActiveTab('dashboard');
   actions.toast(`Expediente ${tr.codigo_tramite} (${formatEstado(tr.estado)}) seleccionado`, 'info', tr.codigo_tramite);
 }
@@ -340,6 +349,8 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  clearTimeout(debounceTimer);
+  busquedaActiva++;
   window.removeEventListener('keydown', onKeydown);
 });
 </script>

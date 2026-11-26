@@ -1,4 +1,5 @@
 import { reactive } from 'vue';
+import { zonaHorariaBolivia } from '../fechas';
 
 export const THEMES = {
     UAGRM: 'uagrm',         // Azul y Rojo vino UAGRM
@@ -24,8 +25,14 @@ const savedContrast = localStorage.getItem('pref_high_contrast') === 'true';
 const savedUser = localStorage.getItem('auth_user') ? JSON.parse(localStorage.getItem('auth_user')) : null;
 
 // Determinar modo oscuro según horario (Automático: 19:00 a 06:00 es noche)
+const formatoHora = new Intl.DateTimeFormat('es-BO', {
+    timeZone: zonaHorariaBolivia,
+    hour: 'numeric',
+    hourCycle: 'h23',
+});
+
 function calcularModoOscuroHorario() {
-    const hora = new Date().getHours();
+    const hora = Number(formatoHora.format(new Date()));
     return hora >= 19 || hora < 6;
 }
 
@@ -43,6 +50,7 @@ export const state = reactive({
     activeTab: 'dashboard',
     globalSearchOpen: false,
     tramiteSeleccionadoParaSolicitar: null,
+    tramiteParaUbicar: null,
     toasts: [],
     visitasPagina: 1,
     visitasGlobales: 1,

@@ -63,6 +63,7 @@ Route::prefix('pagos')->group(function () {
 // Documentos del Expediente
 Route::prefix('documentos')->group(function () {
     Route::post('/', [DocumentoController::class, 'store'])->middleware('rbac:ALUMNO,ENCARGADO,ADMINISTRATIVO');
+    Route::get('/{documento}/archivo', [DocumentoController::class, 'archivo']);
     Route::post('/{id}/validar', [DocumentoController::class, 'validar'])->middleware('rbac:ENCARGADO,ADMINISTRATIVO');
 });
 

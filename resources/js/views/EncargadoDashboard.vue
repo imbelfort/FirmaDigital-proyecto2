@@ -49,22 +49,37 @@
 
     <!-- TAB 1: GESTIÓN DE TRÁMITES DE TODOS LOS ESTUDIANTES (Mover estados, cotejar, observar) -->
     <div v-if="activeTab === 'todos_tramites'" class="space-y-4">
-      <div class="flex items-center justify-between">
+      <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <h2 class="text-base font-bold text-slate-900 dark:text-white">Bandeja de Trámites Solicitados por Alumnos</h2>
-        <span class="text-xs text-slate-500">Mueve los estados procesales y valida los documentos</span>
+        <div class="flex min-w-0 flex-wrap items-center gap-2" role="group" aria-label="Filtros de trámites">
+          <select v-model="filtroEstadoTramites" aria-label="Estado del trámite" class="max-w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs">
+            <option value="">Todos los estados</option>
+            <option v-for="estado in estadosTramites" :key="estado" :value="estado">{{ formatEstadoLegible(estado) }}</option>
+          </select>
+          <select v-model="filtroTipoTramites" aria-label="Tipo de trámite" class="max-w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs">
+            <option value="">Todos los tipos</option>
+            <option v-for="[id, nombre] in tiposDeLaBandeja" :key="id" :value="id">{{ nombre }}</option>
+          </select>
+          <button v-if="codigoTramiteSeleccionado || filtroEstadoTramites || filtroTipoTramites" type="button"
+                  @click="limpiarFiltrosTramites" class="px-2 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 cursor-pointer">
+            Limpiar filtros
+          </button>
+        </div>
       </div>
 
       <!-- Skeleton Loader mientras recupera los trámites en el Encargado -->
       <SkeletonLoader v-if="loading" tipo="cards" :cantidad="4" />
 
-      <div v-else-if="tramites.length === 0" class="m3-card p-12 text-center text-slate-400 border border-slate-200 dark:border-slate-800">
-        No hay trámites registrados en la bandeja.
+      <div v-else-if="tramitesFiltrados.length === 0" class="m3-card p-12 text-center text-slate-500 border border-slate-200 dark:border-slate-800">
+        {{ tramites.length ? 'No hay trámites que coincidan con los filtros.' : 'No hay trámites registrados en la bandeja.' }}
       </div>
 
       <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div
-          v-for="t in tramites"
+          v-for="t in tramitesPaginados"
           :key="t.id"
+          :id="`bandeja-${t.codigo_tramite}`"
+          tabindex="-1"
           class="m3-card p-5 border border-slate-200 dark:border-slate-800 space-y-4 hover:border-blue-400/50 transition"
         >
           <!-- Encabezado con código, solicitante y estado -->
@@ -131,24 +146,29 @@
 
           <!-- Cotejo de Recaudos -->
           <div class="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
-            <span class="text-xs font-bold text-slate-700 dark:text-slate-300 block">Recaudos presentados ({{ t.documentos ? t.documentos.length : 0 }}):</span>
+            <button type="button" @click="abrirAdjuntos(t)" class="px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-xs font-bold cursor-pointer">
+              Ver adjuntos ({{ t.documentos?.length ?? 0 }})
+            </button>
             <div v-for="d in t.documentos" :key="d.id" class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 text-xs space-y-2">
               <div class="flex items-center justify-between">
                 <div>
                   <p class="font-semibold text-slate-800 dark:text-slate-200">{{ d.nombre_documento }}</p>
                   <p class="text-[10px] font-mono text-slate-400 truncate max-w-[200px]">SHA-256: {{ d.hash_documento ? d.hash_documento.substring(0, 16) + '...' : '' }}</p>
                 </div>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" :class="getDocBadge(d.estado_validacion)">{{ formatEstadoLegible(d.estado_validacion) }}</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" :class="getDocBadge(d.estado_validacion)">{{ d.estado_validacion === 'PENDIENTE' && d.observacion_validacion ? 'Corrección en revisión' : formatEstadoLegible(d.estado_validacion) }}</span>
               </div>
 
               <!-- Si el recaudo está observado, mostrar la nota explicativa -->
               <div v-if="d.estado_validacion === 'OBSERVADO'" class="p-2 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300 flex items-start space-x-1.5">
                 <svg class="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                <div><span class="font-bold">Observación:</span> {{ d.observacion_validacion || 'Documento requiere corrección por parte del estudiante.' }}</div>
+                <div>
+                  <p class="font-bold">{{ motivosObservacion[d.tipo_observacion] || 'Observación' }}</p>
+                  <p>{{ d.observacion_validacion || 'Documento requiere corrección por parte del estudiante.' }}</p>
+                </div>
               </div>
 
               <!-- Acciones de validación para el Encargado (Solo si el trámite NO ha concluido ni está en firma) -->
-              <div v-if="!['FIRMADO', 'DESPACHADO', 'EN_FIRMA'].includes(t.estado)" class="flex items-center space-x-2 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+              <div v-if="['INICIADO', 'OBSERVADO'].includes(t.estado)" class="flex items-center space-x-2 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
                 <button
                   @click="aprobarDocDirecto(d)"
                   class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold cursor-pointer transition flex items-center space-x-1"
@@ -158,32 +178,30 @@
                   <span>Aprobar</span>
                 </button>
                 <button
-                  @click="abrirModalObservarDoc(t, d)"
+                  @click="abrirModalObservarDoc(d)"
                   class="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[10px] font-bold cursor-pointer transition flex items-center space-x-1"
                   title="Observar este documento específico con motivo obligatorio"
                 >
                   <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
                   <span>Observar Recaudo</span>
                 </button>
-                <a
+                <button
                   v-if="d.archivo_url"
-                  :href="d.archivo_url"
-                  target="_blank"
-                  class="px-2 py-1 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 text-[10px] underline ml-auto"
+                  type="button" @click="abrirAdjuntos(t, d)"
+                  class="px-2 py-1 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 text-[10px] underline ml-auto cursor-pointer"
                 >
                   Ver archivo
-                </a>
+                </button>
               </div>
               <div v-else class="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-slate-700/60 text-[10px] text-slate-400">
                 <span class="italic font-medium">Revisión cerrada (Trámite en {{ formatEstadoLegible(t.estado) }})</span>
-                <a
+                <button
                   v-if="d.archivo_url"
-                  :href="d.archivo_url"
-                  target="_blank"
-                  class="text-blue-600 dark:text-blue-400 underline"
+                  type="button" @click="abrirAdjuntos(t, d)"
+                  class="text-blue-600 dark:text-blue-400 underline cursor-pointer"
                 >
                   Ver archivo
-                </a>
+                </button>
               </div>
             </div>
           </div>
@@ -191,6 +209,9 @@
           <!-- BOTONES PARA MOVER DE ESTADO EL TRÁMITE (Flujo Progresivo Inteligente) -->
           <div class="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
             <span class="text-xs font-bold text-slate-700 dark:text-slate-300 block">Mover Estado Procesal:</span>
+            <p v-if="tieneAdjuntosBloqueantes(t)" class="text-xs text-amber-800 dark:text-amber-300">
+              El trámite puede avanzar cuando se corrijan los adjuntos observados y se aprueben las correcciones.
+            </p>
             
             <!-- Trámite ya en etapas finales o de firma (Informativo) -->
             <div v-if="t.estado === 'FIRMADO' || t.estado === 'DESPACHADO'" class="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 font-semibold flex items-center space-x-1.5">
@@ -200,15 +221,8 @@
               </span>
             </div>
 
-            <div v-else-if="t.estado === 'EN_FIRMA'" class="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 text-xs text-purple-800 dark:text-purple-300 font-semibold flex items-center justify-between">
+            <div v-else-if="t.estado === 'EN_FIRMA'" class="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 text-xs text-purple-800 dark:text-purple-300 font-semibold">
               <span>⏳ En Despacho del Vicerrector para firma digital criptográfica.</span>
-              <button
-                @click="openObservacion(t)"
-                :disabled="procesandoAccion"
-                class="py-1 px-2.5 bg-red-100 hover:bg-red-200 dark:bg-red-950/40 text-red-700 dark:text-red-300 font-bold rounded-lg transition cursor-pointer text-[11px]"
-              >
-                Observar
-              </button>
             </div>
 
             <!-- Botones dinámicos según el estado actual -->
@@ -217,7 +231,7 @@
               <button
                 v-if="t.estado === 'INICIADO' || t.estado === 'OBSERVADO'"
                 @click="solicitarConfirmacionAvance(t, 'Revisión y Cotejo', 'REQUISITOS_VALIDADOS')"
-                :disabled="procesandoAccion"
+                :disabled="procesandoAccion || tieneAdjuntosBloqueantes(t)"
                 class="py-2 px-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition cursor-pointer disabled:opacity-50 text-left shadow-xs flex items-center justify-between"
               >
                 <span>1. Validar Requisitos</span>
@@ -235,7 +249,7 @@
               <button
                 v-if="t.estado === 'REQUISITOS_VALIDADOS'"
                 @click="solicitarConfirmacionAvance(t, 'Compilación de Expediente', 'EXPEDIENTE_COMPILADO')"
-                :disabled="procesandoAccion"
+                :disabled="procesandoAccion || tieneAdjuntosBloqueantes(t)"
                 class="py-2 px-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition cursor-pointer disabled:opacity-50 text-left shadow-xs flex items-center justify-between"
               >
                 <span>2. Compilar Legajo</span>
@@ -253,15 +267,15 @@
               <button
                 v-if="t.estado === 'EXPEDIENTE_COMPILADO'"
                 @click="solicitarConfirmacionAvance(t, 'Firma Vicerrectoral', 'EN_FIRMA')"
-                :disabled="procesandoAccion"
+                :disabled="procesandoAccion || tieneAdjuntosBloqueantes(t)"
                 class="py-2 px-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition cursor-pointer shadow-sm disabled:opacity-50 text-left flex items-center justify-between"
               >
                 <span>3. Pasar a Firma VR</span>
                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
               </button>
 
-              <!-- Botón Observar Trámite: siempre disponible mientras no esté cerrado -->
               <button
+                v-if="t.estado === 'INICIADO'"
                 @click="openObservacion(t)"
                 :disabled="procesandoAccion"
                 class="py-2 px-2.5 bg-red-100 hover:bg-red-200 dark:bg-red-950/40 text-red-700 dark:text-red-300 font-bold rounded-xl transition cursor-pointer disabled:opacity-50 text-left"
@@ -273,6 +287,13 @@
 
         </div>
       </div>
+      <nav v-if="!loading && tramitesFiltrados.length" class="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500" aria-label="Páginas de trámites">
+        <span aria-live="polite">{{ (paginaVisible - 1) * tramitesPorPagina + 1 }}–{{ Math.min(paginaVisible * tramitesPorPagina, tramitesFiltrados.length) }} de {{ tramitesFiltrados.length }} trámites</span>
+        <div v-if="totalPaginasTramites > 1" class="flex items-center gap-2">
+          <button type="button" :disabled="paginaVisible === 1" @click="paginaTramites = paginaVisible - 1" class="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 cursor-pointer disabled:opacity-40">Anterior</button>
+          <button type="button" :disabled="paginaVisible === totalPaginasTramites" @click="paginaTramites = paginaVisible + 1" class="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 cursor-pointer disabled:opacity-40">Siguiente</button>
+        </div>
+      </nav>
     </div>
 
     <!-- TAB 2: GESTIÓN DE TIPOS DE TRÁMITES (Crear, Editar aranceles Bs y SLAs) -->
@@ -371,6 +392,9 @@
           </div>
           <h3 class="font-bold text-slate-900 dark:text-white">{{ t.asunto }}</h3>
           <p class="text-xs text-slate-500">Alumno: {{ t.solicitante ? t.solicitante.nombre + ' ' + t.solicitante.apellidos : '' }}</p>
+          <button type="button" @click="abrirAdjuntos(t)" class="px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-xs font-bold cursor-pointer">
+            Ver adjuntos ({{ t.documentos?.length ?? 0 }})
+          </button>
 
           <div v-if="t.despacho" class="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs space-y-1">
             <p class="font-bold text-emerald-600">Despachado Oficialmente</p>
@@ -468,7 +492,7 @@
               <tr v-for="log in auditoriaLogs" :key="log.id" class="hover:bg-slate-50 dark:hover:bg-slate-800/50">
                 <td class="p-3 font-mono text-[11px] text-slate-500">
                   <span class="font-bold text-slate-700 dark:text-slate-300">#{{ log.id }}</span>
-                  <br />{{ log.fecha_evento }}
+                  <br />{{ formatFecha(log.fecha_evento) }}
                 </td>
                 <td class="p-3">
                   <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" :class="getBadgeAuditoria(log.tipo_evento)">
@@ -499,6 +523,8 @@
     </div>
 
     <!-- MODAL EDITAR / CREAR TIPO DE TRÁMITE -->
+    <ModalAdjuntos ref="modalAdjuntos" :formato-estado="formatEstadoLegible" />
+
     <div v-if="modalTipoTramite" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
       <div class="m3-card p-6 sm:p-8 max-w-md w-full space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl">
         <h3 class="text-lg font-bold text-slate-900 dark:text-white">
@@ -614,13 +640,22 @@
         </div>
 
         <div>
+          <label for="tipo-observacion-adjunto" class="block text-xs font-semibold mb-1">Motivo de la observación</label>
+          <select id="tipo-observacion-adjunto" v-model="formDocObs.tipo_observacion" required
+                  class="w-full p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm">
+            <option disabled value="">Selecciona un motivo</option>
+            <option v-for="(motivo, codigo) in motivosObservacion" :key="codigo" :value="codigo">{{ motivo }}</option>
+          </select>
+        </div>
+        <div>
           <div class="flex items-center justify-between mb-1">
-            <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-              Motivo de la Observación <span class="text-red-500 font-bold">*</span>
+            <label for="detalle-observacion-adjunto" class="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+              Detalle para el alumno <span class="text-red-500 font-bold">*</span>
             </label>
             <span class="text-[10px] text-amber-600 font-bold">Campo Obligatorio</span>
           </div>
           <textarea
+            id="detalle-observacion-adjunto"
             v-model="formDocObs.observacion_validacion"
             rows="3"
             class="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
@@ -766,12 +801,21 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { formatFecha } from '../fechas';
+import { motivosObservacion } from '../motivosObservacion';
+import { ref, computed, onMounted, watch } from 'vue';
 import { state, actions } from '../stores/appState';
 import axios from 'axios';
+import ModalAdjuntos from '../components/ModalAdjuntos.vue';
 import SkeletonLoader from '../components/SkeletonLoader.vue';
 
 const activeTab = ref('todos_tramites');
+const modalAdjuntos = ref(null);
+
+function abrirAdjuntos(tramite, documento) {
+  modalAdjuntos.value.abrir(tramite, documento);
+}
+
 // Helpers visuales para el Semáforo SLA
 function getSlaBadgeLabel(sla) {
   if (!sla) return 'Sin SLA';
@@ -846,6 +890,62 @@ function formatSlaTiempoRestante(sla) {
 
 const loading = ref(false);
 const tramites = ref([]);
+const codigoTramiteSeleccionado = ref(null);
+const filtroEstadoTramites = ref('');
+const filtroTipoTramites = ref('');
+const paginaTramites = ref(1);
+const tramitePorEnfocar = ref(null);
+const tramitesPorPagina = 8;
+
+const estadosTramites = computed(() => [...new Set(tramites.value.map(tramite => tramite.estado))]);
+const tiposDeLaBandeja = computed(() => [...new Map(tramites.value
+  .filter(tramite => tramite.tipo_tramite)
+  .map(tramite => [tramite.id_tipo_tramite, tramite.tipo_tramite.nombre]))]
+  .sort((a, b) => a[1].localeCompare(b[1], 'es-BO')));
+
+const tramitesFiltrados = computed(() => {
+  return tramites.value.filter(tramite => {
+    if (filtroEstadoTramites.value && tramite.estado !== filtroEstadoTramites.value) return false;
+    if (filtroTipoTramites.value && tramite.id_tipo_tramite !== filtroTipoTramites.value) return false;
+    return !codigoTramiteSeleccionado.value || tramite.codigo_tramite === codigoTramiteSeleccionado.value;
+  });
+});
+
+const totalPaginasTramites = computed(() => Math.max(1, Math.ceil(tramitesFiltrados.value.length / tramitesPorPagina)));
+const paginaVisible = computed(() => Math.min(paginaTramites.value, totalPaginasTramites.value));
+const tramitesPaginados = computed(() => {
+  const inicio = (paginaVisible.value - 1) * tramitesPorPagina;
+  return tramitesFiltrados.value.slice(inicio, inicio + tramitesPorPagina);
+});
+
+function limpiarFiltrosTramites() {
+  codigoTramiteSeleccionado.value = null;
+  filtroEstadoTramites.value = '';
+  filtroTipoTramites.value = '';
+  paginaTramites.value = 1;
+}
+
+watch([filtroEstadoTramites, filtroTipoTramites], () => {
+  paginaTramites.value = 1;
+});
+
+watch(() => state.tramiteParaUbicar, codigo => {
+  if (!codigo) return;
+  activeTab.value = 'todos_tramites';
+  limpiarFiltrosTramites();
+  codigoTramiteSeleccionado.value = codigo;
+  tramitePorEnfocar.value = codigo;
+  state.tramiteParaUbicar = null;
+}, { immediate: true });
+
+watch([tramitePorEnfocar, loading], ([codigo, cargando]) => {
+  if (!codigo || cargando) return;
+  const tarjeta = document.getElementById(`bandeja-${codigo}`);
+  if (!tarjeta) return;
+  tarjeta.focus({ preventScroll: true });
+  tarjeta.scrollIntoView({ block: 'center' });
+  tramitePorEnfocar.value = null;
+}, { flush: 'post' });
 const tiposTramite = ref([]);
 const usuarios = ref([]);
 
@@ -890,14 +990,15 @@ const errorObsTramite = ref('');
 // Estado y modal para Observación Específica de Recaudo
 const modalDocObs = ref(false);
 const docEnObservacion = ref(null);
-const tramiteDelDoc = ref(null);
-const formDocObs = ref({ observacion_validacion: '' });
+const formDocObs = ref({ tipo_observacion: '', observacion_validacion: '' });
 const errorDocObs = ref('');
 
-function abrirModalObservarDoc(tramite, doc) {
-  tramiteDelDoc.value = tramite;
+function abrirModalObservarDoc(doc) {
   docEnObservacion.value = doc;
-  formDocObs.value.observacion_validacion = doc.observacion_validacion || '';
+  formDocObs.value = {
+    tipo_observacion: doc.estado_validacion === 'OBSERVADO' ? (doc.tipo_observacion ?? '') : '',
+    observacion_validacion: doc.estado_validacion === 'OBSERVADO' ? (doc.observacion_validacion ?? '') : '',
+  };
   errorDocObs.value = '';
   modalDocObs.value = true;
 }
@@ -908,6 +1009,7 @@ async function aprobarDocDirecto(doc) {
   try {
     await axios.post(`/api/documentos/${doc.id}/validar`, {
       estado_validacion: 'APROBADO',
+      hash_documento: doc.hash_documento,
       observacion_validacion: 'Documento aprobado conforme a requisitos oficiales.',
     });
     actions.toast(`Documento "${doc.nombre_documento}" verificado y aprobado.`, 'success', 'Recaudo Aprobado');
@@ -920,6 +1022,10 @@ async function aprobarDocDirecto(doc) {
 }
 
 async function confirmarObservarDoc() {
+  if (!formDocObs.value.tipo_observacion) {
+    errorDocObs.value = 'Selecciona un motivo para la observación.';
+    return;
+  }
   if (!formDocObs.value.observacion_validacion || formDocObs.value.observacion_validacion.trim() === '') {
     errorDocObs.value = 'Atención: Debe escribir el motivo de la observación para que el estudiante sepa qué subsanar.';
     return;
@@ -929,19 +1035,12 @@ async function confirmarObservarDoc() {
   procesandoAccion.value = true;
 
   try {
-    // 1. Marca el documento específico como OBSERVADO con su motivo
     await axios.post(`/api/documentos/${docEnObservacion.value.id}/validar`, {
       estado_validacion: 'OBSERVADO',
+      tipo_observacion: formDocObs.value.tipo_observacion,
+      hash_documento: docEnObservacion.value.hash_documento,
       observacion_validacion: formDocObs.value.observacion_validacion.trim(),
     });
-
-    // 2. Coloca el trámite en estado OBSERVADO para abrir el canal de subsanación al alumno
-    if (tramiteDelDoc.value && tramiteDelDoc.value.estado !== 'OBSERVADO') {
-      await axios.post(`/api/tramites/${tramiteDelDoc.value.id}/observaciones`, {
-        tipo_observacion: 'DOCUMENTO_ILEGIBLE',
-        descripcion: `Recaudo '${docEnObservacion.value.nombre_documento}' observado: ${formDocObs.value.observacion_validacion.trim()}`,
-      });
-    }
 
     modalDocObs.value = false;
     actions.toast(`Documento "${docEnObservacion.value.nombre_documento}" observado. Trámite notificado al estudiante.`, 'warning', 'Recaudo Observado');
@@ -1043,6 +1142,11 @@ const modalConfirmarAvance = ref(false);
 const tramiteAvanzarInfo = ref(null);
 const etapaAvanzarDestino = ref('');
 const estadoAvanzarDestino = ref('');
+
+function tieneAdjuntosBloqueantes(tramite) {
+  return tramite.documentos?.some(doc => doc.estado_validacion === 'OBSERVADO'
+    || (doc.estado_validacion === 'PENDIENTE' && doc.observacion_validacion));
+}
 
 function solicitarConfirmacionAvance(t, etapa, nuevoEstado) {
   tramiteAvanzarInfo.value = t;
